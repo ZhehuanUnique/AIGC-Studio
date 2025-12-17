@@ -2,7 +2,7 @@ import {
   Ghost, Bot, Film, Mic, Frame, Users, CheckCircle, Eye, AlertTriangle,
   CheckSquare, Globe, TrendingUp, Wrench, Radio, LucideIcon
 } from 'lucide-react';
-import { Team, News, StatusConfig, NewsTagConfig, AITool, IconKey, ConsumptionRecord } from '../types';
+import { Team, News, StatusConfig, NewsTagConfig, AITool, IconKey } from '../types';
 
 export const STORAGE_KEY = 'personnel_structure_v16_final_fix';
 

@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { 
   Edit2, Target, Clock, Activity, Wallet, TrendingDown, ListTodo, 
   CheckSquare, Square, Users, Plus, Image as ImageIcon, Upload, 
-  Link as LinkIcon, FileText, Copy, Receipt 
+  Link as LinkIcon, Receipt 
 } from 'lucide-react';
-import { Team, Member, ConsumptionRecord } from '../types';
+import { Team, Member } from '../types';
 import { ICON_MAP } from '../constants';
 import { StatusBadge } from './StatusBadge';
 import { ProgressBar } from './ProgressBar';
@@ -34,13 +34,6 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
   const Icon = ICON_MAP[team.iconKey] || ICON_MAP['default'];
   const directors = team.members.filter(m => m.isDirector);
   const crew = team.members.filter(m => !m.isDirector);
-  
-  const handleCopyNotes = () => {
-    if (team.notes) {
-      navigator.clipboard.writeText(team.notes);
-      alert('备注已复制！');
-    }
-  };
   
   const isOverBudget = Number(team.actualCost) > Number(team.budget);
   const budgetColor = isOverBudget ? 'text-red-500' : 'text-slate-300';
