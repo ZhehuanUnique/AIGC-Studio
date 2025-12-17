@@ -1,8 +1,8 @@
 import React from 'react';
 import { 
-  Edit2, Target, Clock, Activity, Wallet, TrendingDown, ListTodo, 
+  Edit2, Activity, Wallet, TrendingDown, ListTodo, 
   CheckSquare, Square, Users, Plus, Image as ImageIcon, Upload, 
-  Link as LinkIcon, Receipt, Lock, Unlock, Trash2 
+  Receipt, Lock, Unlock, Trash2 
 } from 'lucide-react';
 import { Team, Member } from '../types';
 import { ICON_MAP } from '../constants';
@@ -10,7 +10,6 @@ import { StatusBadge } from './StatusBadge';
 import { ProgressBar } from './ProgressBar';
 import { DirectorCard } from './DirectorCard';
 import { MemberCard } from './MemberCard';
-import { ResourceLink } from './ResourceLink';
 
 interface DepartmentSectionProps {
   team: Team;
