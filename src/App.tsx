@@ -567,18 +567,18 @@ function App() {
       </div>
 
       {isEditing && (
-        <div className="bg-orange-950/50 border-b-4 border-orange-500 py-4 shadow-lg shadow-orange-500/20">
+        <div className="bg-gradient-to-r from-orange-600 to-orange-500 border-b-4 border-orange-400 py-5 shadow-xl relative z-50">
           <div className="max-w-7xl mx-auto px-6 flex items-center gap-4">
-            <label className="text-base text-orange-300 font-bold whitespace-nowrap flex items-center gap-2">
-              <Megaphone size={18} />
-              发布通告:
+            <label className="text-lg text-white font-bold whitespace-nowrap flex items-center gap-2 drop-shadow-lg">
+              <Megaphone size={20} className="animate-pulse" />
+              📢 发布通告:
             </label>
             <input
               type="text"
-              className="flex-1 bg-white/95 border-3 border-orange-400 rounded-lg px-4 py-3 text-base text-slate-900 font-medium placeholder:text-slate-400 focus:border-orange-500 focus:ring-4 focus:ring-orange-500/30 outline-none transition-all shadow-md"
+              className="flex-1 bg-white border-4 border-yellow-300 rounded-lg px-5 py-4 text-lg text-slate-900 font-semibold placeholder:text-slate-500 focus:border-yellow-400 focus:ring-4 focus:ring-yellow-300/50 outline-none transition-all shadow-2xl"
               value={announcement}
               onChange={(e) => setAnnouncement(e.target.value)}
-              placeholder="✏️ 在此输入公告内容..."
+              placeholder="✏️ 点击这里输入公告内容..."
             />
           </div>
         </div>
