@@ -96,7 +96,7 @@ export const announcementAPI = {
 };
 
 // 批量保存所有数据
-export const saveAllData = async (teams: any[], news: any[], announcement: string) => {
+export const saveAllData = async (teams: any[], announcement: string) => {
   try {
     // 保存所有团队
     await Promise.all(teams.map(team => teamsAPI.update(team)));
