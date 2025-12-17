@@ -59,16 +59,16 @@ export async function updateTeam(team: any) {
     await sql`
       UPDATE teams SET
         title = ${team.title},
-        icon_key = ${team.iconKey},
-        task = ${team.task},
-        cycle = ${team.cycle},
-        workload = ${team.workload},
-        budget = ${team.budget},
-        actual_cost = ${team.actualCost},
-        progress = ${team.progress},
-        status = ${team.status},
+        icon_key = ${team.iconKey || team.icon_key || 'default'},
+        task = ${team.task || ''},
+        cycle = ${team.cycle || ''},
+        workload = ${team.workload || ''},
+        budget = ${team.budget || 0},
+        actual_cost = ${team.actualCost || team.actual_cost || 0},
+        progress = ${team.progress || 0},
+        status = ${team.status || 'normal'},
         notes = ${team.notes || ''},
-        cover_image = ${team.coverImage || ''},
+        cover_image = ${team.coverImage || team.cover_image || ''},
         images = ${JSON.stringify(team.images || [])},
         links = ${JSON.stringify(team.links || [])}
       WHERE id = ${team.id}
