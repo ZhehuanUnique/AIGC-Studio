@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import {
   Search, Plus, Trash2, X, Image as ImageIcon, Save, RefreshCw, Upload, Zap,
   CheckCircle, CheckSquare, Globe, ListTodo, Square,
-  Download, FileJson, ClipboardList, Lock, Unlock,
+  Download, FileJson, ClipboardList, Unlock,
   Wrench, Megaphone
 } from 'lucide-react';
 import { Team, News, Member, NewsType } from './types';
@@ -25,14 +25,23 @@ function App() {
   const [teams, setTeams] = useState<Team[]>(INITIAL_TEAMS);
   const [news, setNews] = useState<News[]>(INITIAL_NEWS);
   const [announcement, setAnnouncement] = useState<string>(INITIAL_ANNOUNCEMENT);
-  const [isEditing, setIsEditing] = useState<boolean>(false);
   const [isAdminUnlocked, setIsAdminUnlocked] = useState<boolean>(false);
+  const [unlockedGroups, setUnlockedGroups] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [currentPhase, setCurrentPhase] = useState<number>(1);
   const [newsFilter, setNewsFilter] = useState<NewsType>('all');
   const [mounted, setMounted] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [useLocalStorage, setUseLocalStorage] = useState<boolean>(false);
+  const [theme, setTheme] = useState<'dark' | 'blue' | 'white' | 'green'>('dark');
+  
+  // 自定义提示框状态
+  const [alertMessage, setAlertMessage] = useState<string>('');
+  const [showAlert, setShowAlert] = useState<boolean>(false);
+  const [promptMessage, setPromptMessage] = useState<string>('');
+  const [showPrompt, setShowPrompt] = useState<boolean>(false);
+  const [promptValue, setPromptValue] = useState<string>('');
+  const [promptCallback, setPromptCallback] = useState<((value: string | null) => void) | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const groupImgRef = useRef<HTMLInputElement>(null);
@@ -45,10 +54,61 @@ function App() {
   const [showMemberModal, setShowMemberModal] = useState<boolean>(false);
   const [showGroupModal, setShowGroupModal] = useState<boolean>(false);
   const [showNewsModal, setShowNewsModal] = useState<boolean>(false);
+  const [showConsumptionModal, setShowConsumptionModal] = useState<boolean>(false);
+  const [currentGroupId, setCurrentGroupId] = useState<string>('');
+  const [consumptionTier, setConsumptionTier] = useState<299 | 499>(299);
+  const [consumptionNote, setConsumptionNote] = useState<string>('');
   const [newLinkName, setNewLinkName] = useState<string>('');
   const [newLinkUrl, setNewLinkUrl] = useState<string>('');
   const [newTaskText, setNewTaskText] = useState<string>('');
   const announcementTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // 主题配置
+  const themes = {
+    dark: { 
+      bg: 'bg-slate-950', 
+      card: 'bg-[#0f172a]', 
+      text: 'text-slate-200', 
+      border: 'border-slate-800',
+      gradient: 'from-slate-950 via-slate-900 to-slate-950'
+    },
+    blue: { 
+      bg: 'bg-blue-950', 
+      card: 'bg-blue-900/50', 
+      text: 'text-blue-50', 
+      border: 'border-blue-700',
+      gradient: 'from-blue-950 via-blue-900 to-blue-950'
+    },
+    white: { 
+      bg: 'bg-gray-50', 
+      card: 'bg-white', 
+      text: 'text-gray-800', 
+      border: 'border-gray-300',
+      gradient: 'from-gray-100 via-gray-50 to-gray-100'
+    },
+    green: { 
+      bg: 'bg-emerald-950', 
+      card: 'bg-emerald-900/50', 
+      text: 'text-emerald-50', 
+      border: 'border-emerald-700',
+      gradient: 'from-emerald-950 via-emerald-900 to-emerald-950'
+    }
+  };
+
+  // 自定义居中提示框函数
+  const customAlert = useCallback((message: string) => {
+    setAlertMessage(message);
+    setShowAlert(true);
+  }, []);
+
+  const customPrompt = useCallback((message: string): Promise<string | null> => {
+    return new Promise((resolve) => {
+      setPromptMessage(message);
+      setPromptValue('');
+      setShowPrompt(true);
+      setPromptCallback(() => resolve);
+    });
+  }, []);
 
   // 初始化：从 API 或 localStorage 加载数据
   useEffect(() => {
@@ -66,7 +126,17 @@ function App() {
         announcementAPI.get(),
       ]);
       
-      setTeams(teamsData);
+      // 合并密码字段 - 确保每个组都有密码
+      const teamsWithPasswords = teamsData.map((team: Team) => {
+        const initialTeam = INITIAL_TEAMS.find(t => t.id === team.id);
+        return {
+          ...team,
+          password: team.password || initialTeam?.password || '0000',
+          consumptionRecords: team.consumptionRecords || []
+        };
+      });
+      
+      setTeams(teamsWithPasswords);
       setNews(newsData);
       setAnnouncement(announcementData);
       setUseLocalStorage(false);
@@ -78,7 +148,18 @@ function App() {
       if (savedData) {
         try {
           const parsed = JSON.parse(savedData);
-          if (parsed.teams) setTeams(parsed.teams);
+          if (parsed.teams) {
+            // 同样合并密码字段
+            const teamsWithPasswords = parsed.teams.map((team: Team) => {
+              const initialTeam = INITIAL_TEAMS.find(t => t.id === team.id);
+              return {
+                ...team,
+                password: team.password || initialTeam?.password || '0000',
+                consumptionRecords: team.consumptionRecords || []
+              };
+            });
+            setTeams(teamsWithPasswords);
+          }
           if (parsed.news) setNews(parsed.news);
           if (parsed.announcement) setAnnouncement(parsed.announcement);
         } catch (e) {
@@ -135,26 +216,40 @@ function App() {
     };
   }, [announcement, mounted, loading, useLocalStorage]);
 
-  const toggleAdminMode = useCallback(() => {
-    if (isEditing) {
-      setIsEditing(false);
-    } else {
-      if (isAdminUnlocked) {
-        setIsEditing(true);
-      } else {
-        // 使用 setTimeout 将 prompt 延迟执行,避免阻塞 UI 更新
-        setTimeout(() => {
-          const pin = prompt('请输入管理员密码:');
-          if (pin === '8888') {
-            setIsAdminUnlocked(true);
-            setIsEditing(true);
-          } else if (pin !== null) {
-            alert('密码错误！');
-          }
-        }, 0);
-      }
+  // 切换组的锁定状态
+  const toggleGroupLock = useCallback(async (group: Team) => {
+    const groupId = group.id;
+    
+    // 如果已解锁,则锁定
+    if (unlockedGroups.has(groupId) || isAdminUnlocked) {
+      setUnlockedGroups(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(groupId);
+        return newSet;
+      });
+      return;
     }
-  }, [isEditing, isAdminUnlocked]);
+    
+    // 否则提示输入密码
+    const input = await customPrompt(`请输入【${group.title}】的密码:`);
+    if (input === null) return; // 用户取消
+    
+    const password = input.trim(); // 去除前后空格
+    
+    if (password === '8888') {
+      // 管理员密码 - 解锁所有组
+      setIsAdminUnlocked(true);
+      const allGroupIds = new Set(teams.map(t => t.id));
+      setUnlockedGroups(allGroupIds);
+      customAlert('✅ 管理员权限已激活,可以编辑所有组!');
+    } else if (password === group.password) {
+      // 组密码 - 只解锁该组
+      setUnlockedGroups(prev => new Set(prev).add(groupId));
+      customAlert(`✅ 已解锁【${group.title}】!`);
+    } else {
+      customAlert(`❌ 密码错误！\n\n提示:\n• 该组密码: ${group.password}\n• 管理员密码: 8888\n• 您输入的: "${password}"`);
+    }
+  }, [unlockedGroups, isAdminUnlocked, teams, customPrompt, customAlert]);
 
   const handleGenerateReport = useCallback(() => {
     const date = new Date().toLocaleDateString();
@@ -182,12 +277,43 @@ function App() {
     });
     
     navigator.clipboard.writeText(report).then(() => {
-      alert('✅ 日报已生成并复制到剪贴板！\n\n你可以直接去飞书/微信群粘贴了。');
+      customAlert('✅ 日报已生成并复制到剪贴板！\n\n你可以直接去飞书/微信群粘贴了。');
     });
   }, [teams]);
 
-  const handleSavePage = () => {
-    alert('✅ 在 TypeScript 版本中，请使用"备份数据"功能导出 JSON，然后分享给同事。');
+  const handleSavePage = async () => {
+    try {
+      // 保存到 localStorage
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ teams, news, announcement }));
+      
+      // 如果不是使用本地存储模式,则保存到 API
+      if (!useLocalStorage) {
+        // 保存所有团队数据
+        await Promise.all(teams.map(team => teamsAPI.update(team)));
+        // 保存新闻数据
+        await Promise.all(news.map(item => newsAPI.update(item)));
+        // 保存公告
+        await announcementAPI.update(announcement);
+        
+        customAlert('✅ 所有修改已保存到云端数据库和本地存储!');
+      } else {
+        customAlert('✅ 所有修改已保存到本地存储!');
+      }
+      
+      // 保存成功后,恢复到初始锁定状态
+      setIsAdminUnlocked(false);
+      setUnlockedGroups(new Set());
+      
+    } catch (error) {
+      console.error('保存失败:', error);
+      // 至少保存到 localStorage
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ teams, news, announcement }));
+      customAlert('⚠️ 云端保存失败,但已保存到本地存储。');
+      
+      // 即使保存失败也恢复锁定状态
+      setIsAdminUnlocked(false);
+      setUnlockedGroups(new Set());
+    }
   };
 
   const triggerImport = () => importInputRef.current?.click();
@@ -202,10 +328,10 @@ function App() {
         if (data.teams) setTeams(data.teams);
         if (data.news) setNews(data.news);
         if (data.announcement) setAnnouncement(data.announcement);
-        alert('数据恢复成功！');
+        customAlert('数据恢复成功！');
       } catch (err) {
         console.error(err);
-        alert('导入失败');
+        customAlert('导入失败');
       }
     };
     reader.readAsText(file);
@@ -428,16 +554,27 @@ function App() {
     setNewTaskText('');
   };
 
-  const handleAddConsumption = useCallback((groupId: string, tier: 299 | 499, note?: string) => {
+  // 打开添加消费记录的模态框
+  const openAddConsumptionModal = useCallback((groupId: string) => {
+    setCurrentGroupId(groupId);
+    setConsumptionTier(299);
+    setConsumptionNote('');
+    setShowConsumptionModal(true);
+  }, []);
+
+  // 实际添加消费记录
+  const handleSaveConsumption = useCallback(async () => {
+    if (!currentGroupId) return;
+
     const newRecord = {
       id: `cr-${Date.now()}`,
-      tier,
+      tier: consumptionTier,
       date: new Date().toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }),
-      note
+      note: consumptionNote.trim() || undefined
     };
 
     setTeams(prev => prev.map(t => {
-      if (t.id === groupId) {
+      if (t.id === currentGroupId) {
         const newRecords = [...(t.consumptionRecords || []), newRecord];
         // 自动计算实际消耗总额
         const totalConsumption = newRecords.reduce((sum, record) => sum + record.tier, 0);
@@ -452,18 +589,25 @@ function App() {
 
     // 保存到 API
     if (!useLocalStorage) {
-      const updatedTeam = teams.find(t => t.id === groupId);
+      const updatedTeam = teams.find(t => t.id === currentGroupId);
       if (updatedTeam) {
         const newRecords = [...(updatedTeam.consumptionRecords || []), newRecord];
         const totalConsumption = newRecords.reduce((sum, record) => sum + record.tier, 0);
-        teamsAPI.update({
-          ...updatedTeam,
-          consumptionRecords: newRecords,
-          actualCost: totalConsumption
-        }).then(() => console.log('✅ 消费记录已保存')).catch(err => console.error('保存失败:', err));
+        try {
+          await teamsAPI.update({
+            ...updatedTeam,
+            consumptionRecords: newRecords,
+            actualCost: totalConsumption
+          });
+          console.log('✅ 消费记录已保存');
+        } catch (err) {
+          console.error('保存失败:', err);
+        }
       }
     }
-  }, [teams, useLocalStorage]);
+
+    setShowConsumptionModal(false);
+  }, [currentGroupId, consumptionTier, consumptionNote, teams, useLocalStorage]);
 
   const toggleTask = useCallback((taskId: string) => {
     setEditingGroup(prev => prev ? ({
@@ -515,7 +659,7 @@ function App() {
   // 加载中界面
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+      <div className={`min-h-screen ${themes[theme].bg} flex items-center justify-center`}>
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-slate-700 border-t-purple-500 rounded-full animate-spin mx-auto mb-4"></div>
           <div className="text-slate-400 text-lg font-bold">正在从云端数据库加载数据...</div>
@@ -526,14 +670,14 @@ function App() {
   }
 
   return (
-    <div className={`min-h-screen bg-slate-950 text-slate-200 font-sans selection:bg-orange-500/20 selection:text-orange-300 pb-32 transition-opacity duration-1000 ${mounted ? 'opacity-100' : 'opacity-0'}`}>
+    <div className={`min-h-screen ${themes[theme].bg} ${themes[theme].text} font-sans selection:bg-orange-500/20 selection:text-orange-300 pb-32 transition-all duration-500 ${mounted ? 'opacity-100' : 'opacity-0'}`}>
       <div className="fixed inset-0 pointer-events-none z-0">
-        <div className="absolute inset-0 bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950"></div>
-        <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[1200px] h-[600px] bg-blue-950/20 rounded-[100%] blur-[120px] animate-pulse opacity-30"></div>
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:60px_60px] opacity-10"></div>
+        <div className={`absolute inset-0 bg-gradient-to-b ${themes[theme].gradient} transition-all duration-500`}></div>
+        <div className={`absolute top-[-10%] left-1/2 -translate-x-1/2 w-[1200px] h-[600px] ${theme === 'white' ? 'bg-blue-200/30' : 'bg-blue-950/20'} rounded-[100%] blur-[120px] animate-pulse opacity-30 transition-all duration-500`}></div>
+        <div className={`absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:60px_60px] ${theme === 'white' ? 'opacity-20' : 'opacity-10'} transition-opacity duration-500`}></div>
       </div>
       
-      <div className="sticky top-0 z-50 bg-slate-950/90 backdrop-blur-xl border-b border-slate-800/80 shadow-lg">
+      <div className={`sticky top-0 z-50 ${themes[theme].bg}/90 backdrop-blur-xl border-b ${themes[theme].border}/80 shadow-lg transition-colors duration-500`}>
         {announcement && (
           <div className="w-full bg-orange-900/20 border-b border-orange-500/10 text-xs text-orange-300 py-1 px-4 flex items-center justify-center gap-2 overflow-hidden whitespace-nowrap">
             <Megaphone size={12} className="animate-bounce text-orange-500" />
@@ -563,6 +707,28 @@ function App() {
             </div>
           </div>
           <div className="flex items-center gap-4">
+            {/* 主题切换按钮 */}
+            <div className="hidden lg:flex items-center gap-1 bg-slate-900 border border-slate-800 rounded-lg p-1">
+              {(['dark', 'blue', 'white', 'green'] as const).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setTheme(t)}
+                  className={`w-6 h-6 rounded transition-all ${
+                    theme === t ? 'ring-2 ring-sky-500 scale-110' : 'opacity-50 hover:opacity-100'
+                  }`}
+                  title={t === 'dark' ? '黑色' : t === 'blue' ? '淡蓝色' : t === 'white' ? '白色' : '绿色'}
+                  style={{
+                    backgroundColor: 
+                      t === 'dark' ? '#0f172a' : 
+                      t === 'blue' ? '#1e3a8a' : 
+                      t === 'white' ? '#f9fafb' : 
+                      '#064e3b',
+                    border: t === 'white' ? '1px solid #d1d5db' : 'none'
+                  }}
+                />
+              ))}
+            </div>
+
             {/* 数据库状态指示器 */}
             {!loading && (
               <div className={`hidden lg:flex items-center gap-2 text-xs font-mono px-3 py-1 rounded border ${
@@ -584,18 +750,13 @@ function App() {
               <span>¥{totalBudget}</span>
             </div>
 
-            <button
-              onClick={toggleAdminMode}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                isEditing
-                  ? 'bg-orange-600/90 text-white border border-orange-500/50 animate-pulse'
-                  : 'bg-slate-900 text-slate-400 border border-slate-800 hover:border-slate-700'
-              }`}
-            >
-              {isEditing ? <Unlock size={14} /> : <Lock size={14} />}
-              {isEditing ? 'ADMIN' : 'VIEW'}
-            </button>
-            {isEditing && (
+            {isAdminUnlocked && (
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-600/90 text-white border border-emerald-500/50">
+                <Unlock size={14} />
+                <span>管理员模式</span>
+              </div>
+            )}
+            {isAdminUnlocked && (
               <div className="flex items-center gap-1 bg-slate-900 border border-slate-800 rounded-lg p-1">
                 <button
                   onClick={handleGenerateReport}
@@ -648,7 +809,7 @@ function App() {
         </div>
       </div>
 
-      {isEditing && (
+      {isAdminUnlocked && (
         <div className="bg-gradient-to-r from-orange-600 to-orange-500 border-b-4 border-orange-400 py-5 shadow-xl relative z-50">
           <div className="max-w-7xl mx-auto px-6 flex items-center gap-4">
             <label className="text-lg text-white font-bold whitespace-nowrap flex items-center gap-2 drop-shadow-lg">
@@ -737,7 +898,7 @@ function App() {
                     </button>
                   ))}
               </div>
-              {isEditing && (
+              {isAdminUnlocked && (
                 <button
                   onClick={openAddNewsModal}
                   className="ml-2 text-xs flex items-center gap-1 bg-orange-600 hover:bg-orange-500 text-white px-3 py-1.5 rounded font-bold transition-colors"
@@ -752,7 +913,7 @@ function App() {
               <NewsCard
                 key={item.id}
                 item={item}
-                isEditing={isEditing}
+                isEditing={isAdminUnlocked}
                 onClick={openEditNewsModal}
                 onDelete={handleDeleteNews}
               />
@@ -778,20 +939,16 @@ function App() {
               key={team.id}
               team={team}
               index={index}
-              isEditing={isEditing}
+              isEditing={isAdminUnlocked}
+              isUnlocked={unlockedGroups.has(team.id) || isAdminUnlocked}
               onEditMember={openEditMemberModal}
               onAddMember={openAddMemberModal}
               onEditGroup={(group) => {
-                // 验证团队密码
-                const password = prompt(`请输入【${group.title}】的管理员密码:`);
-                if (password === group.password) {
-                  setEditingGroup(group);
-                  setShowGroupModal(true);
-                } else if (password !== null) {
-                  alert('密码错误！');
-                }
+                setEditingGroup(group);
+                setShowGroupModal(true);
               }}
-              onAddConsumption={handleAddConsumption}
+              onAddConsumption={openAddConsumptionModal}
+              onToggleLock={toggleGroupLock}
             />
           ))}
         </div>
@@ -1220,6 +1377,129 @@ function App() {
           </>
         )}
       </Modal>
+
+      {/* 添加消费记录模态框 */}
+      <Modal
+        isOpen={showConsumptionModal}
+        onClose={() => setShowConsumptionModal(false)}
+        title="添加即梦账号消费记录"
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-xs font-bold text-slate-400 mb-2">选择档位</label>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => setConsumptionTier(299)}
+                className={`p-4 rounded-lg border-2 transition-all ${
+                  consumptionTier === 299
+                    ? 'border-blue-500 bg-blue-500/10 text-blue-400'
+                    : 'border-slate-700 bg-slate-900 text-slate-400 hover:border-slate-600'
+                }`}
+              >
+                <div className="text-2xl font-bold">¥299</div>
+                <div className="text-xs mt-1">标准档</div>
+              </button>
+              <button
+                onClick={() => setConsumptionTier(499)}
+                className={`p-4 rounded-lg border-2 transition-all ${
+                  consumptionTier === 499
+                    ? 'border-purple-500 bg-purple-500/10 text-purple-400'
+                    : 'border-slate-700 bg-slate-900 text-slate-400 hover:border-slate-600'
+                }`}
+              >
+                <div className="text-2xl font-bold">¥499</div>
+                <div className="text-xs mt-1">高级档</div>
+              </button>
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-400 mb-2">备注 (可选)</label>
+            <textarea
+              value={consumptionNote}
+              onChange={(e) => setConsumptionNote(e.target.value)}
+              placeholder="例如：首次充值、高级功能等..."
+              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 placeholder-slate-600 outline-none focus:border-sky-500 resize-none"
+              rows={3}
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              onClick={() => setShowConsumptionModal(false)}
+              className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-bold text-sm transition-colors"
+            >
+              取消
+            </button>
+            <button
+              onClick={handleSaveConsumption}
+              className="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-lg font-bold text-sm shadow-lg transition-colors"
+            >
+              确认添加
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* 自定义Alert对话框 - 居中显示 */}
+      {showAlert && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className={`${themes[theme].card} ${themes[theme].border} border-2 rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl animate-in zoom-in-95 duration-200`}>
+            <div className={`${themes[theme].text} text-center mb-6 whitespace-pre-wrap`}>
+              {alertMessage}
+            </div>
+            <button
+              onClick={() => setShowAlert(false)}
+              className="w-full bg-sky-600 hover:bg-sky-500 text-white px-6 py-3 rounded-lg font-bold transition-colors shadow-lg"
+            >
+              确定
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 自定义Prompt对话框 - 居中显示 */}
+      {showPrompt && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className={`${themes[theme].card} ${themes[theme].border} border-2 rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl animate-in zoom-in-95 duration-200`}>
+            <div className={`${themes[theme].text} text-center mb-4 whitespace-pre-wrap`}>
+              {promptMessage}
+            </div>
+            <input
+              type="text"
+              value={promptValue}
+              onChange={(e) => setPromptValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  promptCallback?.(promptValue);
+                  setShowPrompt(false);
+                }
+              }}
+              className={`w-full ${themes[theme].card} ${themes[theme].border} border rounded-lg px-4 py-3 mb-4 ${themes[theme].text} outline-none focus:ring-2 focus:ring-sky-500`}
+              autoFocus
+              placeholder="请输入..."
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  promptCallback?.(null);
+                  setShowPrompt(false);
+                }}
+                className="flex-1 bg-slate-700 hover:bg-slate-600 text-white px-4 py-3 rounded-lg font-bold transition-colors"
+              >
+                取消
+              </button>
+              <button
+                onClick={() => {
+                  promptCallback?.(promptValue);
+                  setShowPrompt(false);
+                }}
+                className="flex-1 bg-sky-600 hover:bg-sky-500 text-white px-4 py-3 rounded-lg font-bold transition-colors shadow-lg"
+              >
+                确定
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -2,7 +2,7 @@ import React from 'react';
 import { 
   Edit2, Target, Clock, Activity, Wallet, TrendingDown, ListTodo, 
   CheckSquare, Square, Users, Plus, Image as ImageIcon, Upload, 
-  Link as LinkIcon, Receipt 
+  Link as LinkIcon, Receipt, Lock, Unlock 
 } from 'lucide-react';
 import { Team, Member } from '../types';
 import { ICON_MAP } from '../constants';
@@ -16,20 +16,24 @@ interface DepartmentSectionProps {
   team: Team;
   index: number;
   isEditing: boolean;
+  isUnlocked: boolean;
   onEditMember: (member: Member) => void;
   onAddMember: (groupId: string) => void;
   onEditGroup: (group: Team) => void;
-  onAddConsumption?: (groupId: string, tier: 299 | 499, note?: string) => void;
+  onAddConsumption?: (groupId: string) => void;
+  onToggleLock: (team: Team) => void;
 }
 
 export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
   team,
   index,
   isEditing,
+  isUnlocked,
   onEditMember,
   onAddMember,
   onEditGroup,
-  onAddConsumption
+  onAddConsumption,
+  onToggleLock
 }) => {
   const Icon = ICON_MAP[team.iconKey] || ICON_MAP['default'];
   const directors = team.members.filter(m => m.isDirector);
@@ -46,12 +50,29 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
       <div className="absolute -top-6 -right-6 text-9xl font-black text-slate-800/20 pointer-events-none select-none">
         0{index + 1}
       </div>
+      
+      {/* 锁按钮 - 右上角 */}
+      <button
+        onClick={() => onToggleLock(team)}
+        className={`absolute top-4 right-4 z-20 flex flex-col items-center gap-1 px-3 py-2 rounded-lg font-bold transition-all ${
+          isUnlocked
+            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20'
+            : 'bg-slate-800 text-slate-400 border border-slate-700 hover:border-slate-600 hover:text-slate-300'
+        }`}
+      >
+        {isUnlocked ? <Unlock size={16} /> : <Lock size={16} />}
+        <div className="text-[8px] leading-tight">
+          <div>UPDATE</div>
+          <div>更新</div>
+        </div>
+      </button>
+
       <div className="flex flex-col lg:flex-row lg:items-end gap-6 mb-8 relative z-10">
         <div className="flex items-center gap-4 min-w-[240px]">
           <div
-            onClick={() => isEditing && onEditGroup(team)}
+            onClick={() => isUnlocked && onEditGroup(team)}
             className={`p-3 bg-slate-800 rounded-xl border border-slate-700 shadow-sm text-sky-500 ${
-              isEditing ? 'cursor-pointer hover:bg-slate-700' : ''
+              isUnlocked ? 'cursor-pointer hover:bg-slate-700' : ''
             }`}
           >
             <Icon size={24} strokeWidth={1.5} />
@@ -62,7 +83,7 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
                 {team.title}
               </h2>
               <StatusBadge status={team.status || 'normal'} />
-              {isEditing && (
+              {isUnlocked && (
                 <button onClick={() => onEditGroup(team)}>
                   <Edit2 size={14} className="text-slate-500 hover:text-sky-500 transition-colors" />
                 </button>
@@ -200,7 +221,7 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
               <div className="text-[10px] text-slate-500 uppercase font-bold tracking-widest flex items-center gap-2">
                 <Users size={12} /> Execution Team
               </div>
-              {isEditing && (
+              {isUnlocked && (
                 <button
                   onClick={() => onAddMember(team.id)}
                   className="flex items-center gap-1 text-[10px] text-sky-500 hover:text-sky-400 font-bold bg-sky-500/10 px-2 py-1 rounded hover:bg-sky-500/20 transition-colors"
@@ -250,7 +271,7 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
                   <span className="text-[9px] opacity-50">暂无 Key Visual</span>
                 </div>
               )}
-              {isEditing && (
+              {isUnlocked && (
                 <button
                   onClick={() => onEditGroup(team)}
                   className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs text-white font-bold gap-1"
@@ -299,13 +320,9 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
               <div className="text-[10px] text-slate-500 uppercase font-bold tracking-widest flex items-center gap-2">
                 <Receipt size={12} /> 消耗即梦账号数
               </div>
-              {isEditing && onAddConsumption && (
+              {isUnlocked && onAddConsumption && (
                 <button
-                  onClick={() => {
-                    const tier = window.confirm('选择档位:\n确定=299档  取消=499档') ? 299 : 499;
-                    const note = window.prompt('备注(可选):');
-                    onAddConsumption(team.id, tier as 299 | 499, note || undefined);
-                  }}
+                  onClick={() => onAddConsumption(team.id)}
                   className="text-sky-500 hover:text-white transition-colors bg-sky-500/10 hover:bg-sky-500/20 rounded p-1"
                   title="添加消费记录"
                 >
