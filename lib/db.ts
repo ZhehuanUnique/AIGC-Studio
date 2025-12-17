@@ -1,26 +1,13 @@
-import { createPool } from '@vercel/postgres';
+import { sql } from '@vercel/postgres';
 
 /**
  * 数据库工具函数
  * 用于与 Vercel Postgres 交互
+ * @vercel/postgres 会自动从环境变量读取 DATABASE_URL
  */
 
-// 显式创建数据库连接池
-// 尝试多个可能的环境变量名
-const connectionString = 
-  process.env.POSTGRES_URL || 
-  process.env.DATABASE_URL || 
-  process.env.POSTGRES_PRISMA_URL;
-
-if (!connectionString) {
-  throw new Error('Database connection string not found. Please check environment variables.');
-}
-
-const db = createPool({
-  connectionString,
-});
-
-export const sql = db.sql;
+// 直接导出 sql，它会自动使用环境变量中的连接配置
+export { sql };
 
 // 获取所有团队数据（包含成员、todos等）
 export async function getTeams() {
