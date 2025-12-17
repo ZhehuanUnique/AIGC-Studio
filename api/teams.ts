@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getTeams, updateTeam } from '../lib/db';
+import { getTeams, updateTeam } from '../lib/db.js';
 
 export default async function handler(
   req: VercelRequest,

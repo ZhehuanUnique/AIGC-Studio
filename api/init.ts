@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { sql } from '@vercel/postgres';
-import { INITIAL_TEAMS, INITIAL_NEWS, INITIAL_ANNOUNCEMENT } from '../src/constants';
+import { INITIAL_TEAMS, INITIAL_NEWS, INITIAL_ANNOUNCEMENT } from '../src/constants/index.js';
 
 /**
  * 数据库初始化 API

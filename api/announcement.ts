@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getAnnouncement, updateAnnouncement } from '../lib/db';
+import { getAnnouncement, updateAnnouncement } from '../lib/db.js';
 
 export default async function handler(
   req: VercelRequest,

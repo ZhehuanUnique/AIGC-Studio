@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getNews, addNews, updateNews, deleteNews } from '../lib/db';
+import { getNews, addNews, updateNews, deleteNews } from '../lib/db.js';
 
 export default async function handler(
   req: VercelRequest,
