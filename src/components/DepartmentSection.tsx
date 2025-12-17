@@ -122,7 +122,7 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
                 </button>
               )}
             </div>
-            <div className="text-[10px] font-mono text-slate-500 tracking-wider mt-1 uppercase flex items-center gap-2">
+            <div className="text-xs font-mono text-slate-500 tracking-wider mt-1 uppercase flex items-center gap-2">
               <span>SIZE: {team.members.length}</span>
               <span className="h-3 w-px bg-slate-700"></span>
               <span>PROGRESS: {team.progress}%</span>
@@ -137,8 +137,8 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
                 <Activity size={12} />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-[9px] text-slate-500 uppercase font-bold">每日交付</div>
-                <div className="text-xs text-slate-300 truncate" title={team.workload}>
+                <div className="text-xs text-slate-500 uppercase font-bold">每日交付</div>
+                <div className="text-sm text-slate-300 truncate" title={team.workload}>
                   {team.workload || '-'}
                 </div>
               </div>
@@ -150,7 +150,7 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
                 <Wallet size={12} />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-[9px] text-slate-500 uppercase font-bold">预期</div>
+                <div className="text-xs text-slate-500 uppercase font-bold">预期</div>
                 <div className={`text-lg font-mono font-bold ${budgetColor}`}>¥ {team.budget || 0}</div>
               </div>
             </div>
@@ -163,7 +163,7 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
                 <TrendingDown size={12} />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-[9px] text-slate-500 uppercase font-bold">实耗</div>
+                <div className="text-xs text-slate-500 uppercase font-bold">实耗</div>
                 <div className={`text-lg font-mono font-bold ${costColor}`}>¥ {team.actualCost || 0}</div>
               </div>
             </div>
@@ -349,10 +349,10 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
                             <span className={`font-bold ${amountColors[record.amount as keyof typeof amountColors] || 'text-sky-400'}`}>
                               ¥{record.amount}
                             </span>
-                            <span className="text-[10px] text-slate-600">{record.datetime}</span>
+                            <span className="text-xs text-slate-600">{record.datetime}</span>
                           </div>
                           {record.note && (
-                            <div className="text-[10px] text-slate-500 italic">{record.note}</div>
+                            <div className="text-xs text-slate-500 italic">{record.note}</div>
                           )}
                         </div>
                         {isUnlocked && onDeleteConsumption && (

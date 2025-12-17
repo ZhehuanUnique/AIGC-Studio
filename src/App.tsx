@@ -800,14 +800,14 @@ function App() {
                   : 'bg-emerald-900/20 border-emerald-500/20 text-emerald-400'
               }`}>
                 <span className={`w-2 h-2 rounded-full ${useLocalStorage ? 'bg-yellow-500' : 'bg-emerald-500'} animate-pulse`}></span>
-                <span className="text-[10px] font-bold uppercase">
+                <span className="text-xs font-bold uppercase">
                   {useLocalStorage ? '本地模式' : '云端数据库'}
                 </span>
               </div>
             )}
             
-            <div className="hidden lg:flex items-center gap-2 text-xs font-mono text-slate-400 bg-slate-900 px-3 py-1 rounded border border-slate-800">
-              <span className="text-[10px] font-bold uppercase text-slate-500">Budget Burn:</span>
+            <div className="hidden lg:flex items-center gap-2 text-sm font-mono text-slate-400 bg-slate-900 px-3 py-1.5 rounded border border-slate-800">
+              <span className="text-xs font-bold uppercase text-slate-500">资金消耗:</span>
               <span className={totalCost > totalBudget ? 'text-red-500' : 'text-emerald-400'}>¥{totalCost}</span>
               <span className="text-slate-600">/</span>
               <span>¥{totalBudget}</span>
