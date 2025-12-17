@@ -700,8 +700,14 @@ function App() {
               onEditMember={openEditMemberModal}
               onAddMember={openAddMemberModal}
               onEditGroup={(group) => {
-                setEditingGroup(group);
-                setShowGroupModal(true);
+                // 验证团队密码
+                const password = prompt(`请输入【${group.title}】的管理员密码:`);
+                if (password === group.password) {
+                  setEditingGroup(group);
+                  setShowGroupModal(true);
+                } else if (password !== null) {
+                  alert('密码错误！');
+                }
               }}
             />
           ))}

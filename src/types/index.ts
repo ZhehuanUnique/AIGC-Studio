@@ -41,6 +41,7 @@ export interface Team {
   links: ResourceLink[];
   todos: Todo[];
   members: Member[];
+  password?: string; // 团队管理员密码
 }
 
 export interface News {
