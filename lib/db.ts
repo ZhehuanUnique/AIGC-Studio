@@ -1,9 +1,16 @@
-import { sql } from '@vercel/postgres';
+import { createPool } from '@vercel/postgres';
 
 /**
  * 数据库工具函数
  * 用于与 Vercel Postgres 交互
  */
+
+// 显式创建数据库连接池
+const db = createPool({
+  connectionString: process.env.POSTGRES_URL,
+});
+
+export const sql = db.sql;
 
 // 获取所有团队数据（包含成员、todos等）
 export async function getTeams() {
