@@ -569,12 +569,13 @@ function App() {
       {isEditing && (
         <div className="bg-slate-900 border-b border-slate-800 py-2">
           <div className="max-w-7xl mx-auto px-6 flex items-center gap-4">
-            <label className="text-xs text-slate-500 font-bold whitespace-nowrap">发布通告:</label>
+            <label className="text-xs text-orange-400 font-bold whitespace-nowrap">发布通告:</label>
             <input
               type="text"
-              className="flex-1 bg-slate-950 border border-slate-800 rounded px-3 py-1 text-xs text-slate-200 focus:border-orange-500/50 outline-none"
+              className="flex-1 bg-slate-700 border-2 border-orange-500/40 rounded px-3 py-2 text-sm text-white placeholder:text-slate-400 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 outline-none transition-all"
               value={announcement}
               onChange={(e) => setAnnouncement(e.target.value)}
+              placeholder="输入公告内容..."
             />
           </div>
         </div>
