@@ -124,7 +124,7 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-[9px] text-slate-500 uppercase font-bold">Budget (预期)</div>
-                <div className={`text-xs font-mono ${budgetColor}`}>¥ {team.budget || 0}</div>
+                <div className={`text-lg font-mono font-bold ${budgetColor}`}>¥ {team.budget || 0}</div>
               </div>
             </div>
             <div className={`rounded-lg p-2 px-3 border border-slate-800 flex items-center gap-3 ${
@@ -137,7 +137,7 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-[9px] text-slate-500 uppercase font-bold">Actual Cost (实耗)</div>
-                <div className={`text-xs font-mono font-bold ${costColor}`}>¥ {team.actualCost || 0}</div>
+                <div className={`text-lg font-mono font-bold ${costColor}`}>¥ {team.actualCost || 0}</div>
               </div>
             </div>
           </div>

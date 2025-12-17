@@ -571,7 +571,7 @@ function App() {
           <div className="max-w-7xl mx-auto px-6 flex items-center gap-4">
             <label className="text-lg text-white font-bold whitespace-nowrap flex items-center gap-2 drop-shadow-lg">
               <Megaphone size={20} className="animate-pulse" />
-              📢 发布通告:
+               发布通告:
             </label>
             <input
               type="text"
