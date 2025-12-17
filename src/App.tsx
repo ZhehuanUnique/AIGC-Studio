@@ -1051,12 +1051,43 @@ function App() {
                 />
               </div>
             </div>
-            <InputField
-              label="备忘录"
-              type="textarea"
-              value={editingGroup.notes || ''}
-              onChange={(e) => setEditingGroup({ ...editingGroup, notes: e.target.value })}
-            />
+            <div className="mb-6">
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-xs font-bold text-slate-400 uppercase">消耗即梦账号数</label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const tier = prompt('请选择套餐档位:\n输入 299 或 499');
+                    if (tier === '299' || tier === '499') {
+                      const remark = prompt('是否添加备注？（可选，直接点取消跳过）');
+                      const today = new Date().toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' });
+                      const remarkText = remark ? ` - ${remark}` : '';
+                      const newRecord = `+1 [${tier}档] ${today}${remarkText}`;
+                      const currentNotes = editingGroup.notes || '';
+                      const updatedNotes = currentNotes ? `${currentNotes}\n${newRecord}` : newRecord;
+                      const costToAdd = parseInt(tier);
+                      setEditingGroup({ 
+                        ...editingGroup, 
+                        notes: updatedNotes,
+                        actualCost: (editingGroup.actualCost || 0) + costToAdd
+                      });
+                    } else if (tier !== null) {
+                      alert('请输入 299 或 499');
+                    }
+                  }}
+                  className="flex items-center gap-1 bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
+                >
+                  <Plus size={14} /> 添加消费记录
+                </button>
+              </div>
+              <textarea
+                className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-sm text-slate-200 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 resize-none transition-all"
+                rows={4}
+                value={editingGroup.notes || ''}
+                onChange={(e) => setEditingGroup({ ...editingGroup, notes: e.target.value })}
+                placeholder="即梦账号消费记录会显示在这里..."
+              />
+            </div>
             <div className="mb-6">
               <label className="block text-xs font-bold text-slate-400 uppercase mb-2">资源链接</label>
               <div className="bg-slate-950 rounded-lg p-3 border border-slate-800">
