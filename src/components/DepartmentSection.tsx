@@ -1,10 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   Edit2, Target, Clock, Activity, Wallet, TrendingDown, ListTodo, 
   CheckSquare, Square, Users, Plus, Image as ImageIcon, Upload, 
-  Link as LinkIcon, FileText, Copy 
+  Link as LinkIcon, FileText, Copy, Receipt 
 } from 'lucide-react';
-import { Team, Member } from '../types';
+import { Team, Member, ConsumptionRecord } from '../types';
 import { ICON_MAP } from '../constants';
 import { StatusBadge } from './StatusBadge';
 import { ProgressBar } from './ProgressBar';
@@ -19,6 +19,7 @@ interface DepartmentSectionProps {
   onEditMember: (member: Member) => void;
   onAddMember: (groupId: string) => void;
   onEditGroup: (group: Team) => void;
+  onAddConsumption?: (groupId: string, tier: 299 | 499, note?: string) => void;
 }
 
 export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
@@ -27,7 +28,8 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
   isEditing,
   onEditMember,
   onAddMember,
-  onEditGroup
+  onEditGroup,
+  onAddConsumption
 }) => {
   const Icon = ICON_MAP[team.iconKey] || ICON_MAP['default'];
   const directors = team.members.filter(m => m.isDirector);
@@ -302,19 +304,45 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
           <div className="bg-[#1e293b]/30 rounded-xl p-4 border border-slate-800 flex-1 flex flex-col min-h-[120px]">
             <div className="flex items-center justify-between mb-2">
               <div className="text-[10px] text-slate-500 uppercase font-bold tracking-widest flex items-center gap-2">
-                <FileText size={12} /> Memo
+                <Receipt size={12} /> 消耗即梦账号数
               </div>
-              <button
-                onClick={handleCopyNotes}
-                className="text-slate-500 hover:text-white transition-colors"
-              >
-                <Copy size={12} />
-              </button>
+              {isEditing && onAddConsumption && (
+                <button
+                  onClick={() => {
+                    const tier = window.confirm('选择档位:\n确定=299档  取消=499档') ? 299 : 499;
+                    const note = window.prompt('备注(可选):');
+                    onAddConsumption(team.id, tier as 299 | 499, note || undefined);
+                  }}
+                  className="text-sky-500 hover:text-white transition-colors bg-sky-500/10 hover:bg-sky-500/20 rounded p-1"
+                  title="添加消费记录"
+                >
+                  <Plus size={12} />
+                </button>
+              )}
             </div>
-            <div className="flex-1 bg-slate-950/50 rounded-lg p-3 border border-slate-800/50">
-              <p className="text-xs text-slate-400 whitespace-pre-wrap font-mono leading-relaxed break-all">
-                {team.notes || <span className="text-slate-700 italic">暂无备注...</span>}
-              </p>
+            <div className="flex-1 bg-slate-950/50 rounded-lg p-3 border border-slate-800/50 overflow-y-auto max-h-[200px]">
+              {team.consumptionRecords && team.consumptionRecords.length > 0 ? (
+                <div className="space-y-1.5">
+                  {team.consumptionRecords.map((record, idx) => (
+                    <div key={record.id} className="text-xs text-slate-400 font-mono flex items-start gap-2 bg-slate-900/30 rounded p-2 border border-slate-800/30">
+                      <span className="text-slate-600 font-bold">#{idx + 1}</span>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className={`font-bold ${record.tier === 299 ? 'text-blue-400' : 'text-purple-400'}`}>
+                            ¥{record.tier}
+                          </span>
+                          <span className="text-[10px] text-slate-600">{record.date}</span>
+                        </div>
+                        {record.note && (
+                          <div className="text-[10px] text-slate-500 mt-0.5 italic">{record.note}</div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-slate-700 italic">暂无消费记录...</p>
+              )}
             </div>
           </div>
         </div>

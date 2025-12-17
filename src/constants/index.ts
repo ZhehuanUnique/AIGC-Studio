@@ -2,7 +2,7 @@ import {
   Ghost, Bot, Film, Mic, Frame, Users, CheckCircle, Eye, AlertTriangle,
   CheckSquare, Globe, TrendingUp, Wrench, Radio, LucideIcon
 } from 'lucide-react';
-import { Team, News, StatusConfig, NewsTagConfig, AITool, IconKey } from '../types';
+import { Team, News, StatusConfig, NewsTagConfig, AITool, IconKey, ConsumptionRecord } from '../types';
 
 export const STORAGE_KEY = 'personnel_structure_v16_final_fix';
 
@@ -21,6 +21,7 @@ export const INITIAL_TEAMS: Team[] = [
     progress: 35, status: 'normal', notes: '氛围参考：中式民俗恐怖。\nLighting: Candle light.', coverImage: '', images: [],
     links: [{ name: '素材库', url: '#' }],
     password: '1111',
+    consumptionRecords: [],
     todos: [
       { id: 't1', text: '完成第3集墓地场景渲染', done: true },
       { id: 't2', text: '修复光影Bug', done: false }
@@ -41,6 +42,7 @@ export const INITIAL_TEAMS: Team[] = [
     progress: 78, status: 'urgent', notes: '紧急：V3模型口型抖动需修复。', coverImage: '', images: [],
     links: [{ name: '角色LoRA', url: '#' }],
     password: '2222',
+    consumptionRecords: [],
     todos: [{ id: 't1', text: '采集女主50句新干音', done: false }],
     members: [
       { id: 'm7', name: '汪凯伦', isDirector: true, avatar: '', role: '总负责人' },
@@ -57,6 +59,7 @@ export const INITIAL_TEAMS: Team[] = [
     progress: 15, status: 'normal', notes: '主角一致性Seed: 284910', coverImage: '', images: [],
     links: [{ name: '在线脚本', url: '#' }],
     password: '3333',
+    consumptionRecords: [],
     todos: [],
     members: [
       { id: 'm12', name: '彭枫', isDirector: true, avatar: '', role: '总负责人' },
@@ -70,6 +73,7 @@ export const INITIAL_TEAMS: Team[] = [
     progress: 90, status: 'review', notes: '第2集初版已出，等待审核。', coverImage: '', images: [],
     links: [{ name: '工程文件', url: '#' }],
     password: '4444',
+    consumptionRecords: [],
     todos: [{ id: 't1', text: '第2集调色修正', done: false }],
     members: [
       { id: 'm14', name: '权卓文', isDirector: false, avatar: '', role: '执行专员' },
@@ -84,6 +88,7 @@ export const INITIAL_TEAMS: Team[] = [
     budget: 1500, actualCost: 0,
     progress: 50, status: 'normal', notes: '需补充"开门声"素材。', coverImage: '', images: [], links: [],
     password: '5555',
+    consumptionRecords: [],
     todos: [],
     members: [
       { id: 'm18', name: '张雨辰', isDirector: false, avatar: '', role: '执行专员' }

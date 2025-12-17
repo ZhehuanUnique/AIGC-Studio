@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   Search, Plus, Trash2, X, Image as ImageIcon, Save, RefreshCw, Upload, Zap,
   CheckCircle, CheckSquare, Globe, ListTodo, Square,
@@ -91,10 +91,28 @@ function App() {
     }
   };
 
-  // 自动保存到 localStorage（作为本地备份）
+  // 自动保存到 localStorage（作为本地备份） - 使用防抖优化性能
   useEffect(() => {
     if (mounted && !loading) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ teams, news, announcement }));
+      // 使用 setTimeout 将保存操作延迟到下一个事件循环,避免阻塞 UI
+      const timeoutId = setTimeout(() => {
+        try {
+          // 使用 requestIdleCallback 在浏览器空闲时执行,如果不支持则直接执行
+          const saveToStorage = () => {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify({ teams, news, announcement }));
+          };
+          
+          if ('requestIdleCallback' in window) {
+            requestIdleCallback(saveToStorage, { timeout: 2000 });
+          } else {
+            saveToStorage();
+          }
+        } catch (error) {
+          console.error('保存数据失败:', error);
+        }
+      }, 300); // 300ms 防抖延迟
+      
+      return () => clearTimeout(timeoutId);
     }
   }, [teams, news, announcement, mounted, loading]);
 
@@ -117,27 +135,30 @@ function App() {
     };
   }, [announcement, mounted, loading, useLocalStorage]);
 
-  const toggleAdminMode = () => {
+  const toggleAdminMode = useCallback(() => {
     if (isEditing) {
       setIsEditing(false);
     } else {
       if (isAdminUnlocked) {
         setIsEditing(true);
       } else {
-        const pin = prompt('请输入管理员密码:');
-        if (pin === '8888') {
-          setIsAdminUnlocked(true);
-          setIsEditing(true);
-        } else if (pin !== null) {
-          alert('密码错误！');
-        }
+        // 使用 setTimeout 将 prompt 延迟执行,避免阻塞 UI 更新
+        setTimeout(() => {
+          const pin = prompt('请输入管理员密码:');
+          if (pin === '8888') {
+            setIsAdminUnlocked(true);
+            setIsEditing(true);
+          } else if (pin !== null) {
+            alert('密码错误！');
+          }
+        }, 0);
       }
     }
-  };
+  }, [isEditing, isAdminUnlocked]);
 
-  const handleGenerateReport = () => {
+  const handleGenerateReport = useCallback(() => {
     const date = new Date().toLocaleDateString();
-    let report = `📢 【AIGC漫剧制作日报】 ${date}\n\n`;
+    let report = `📢 【AIGC制作日报】 ${date}\n\n`;
     
     const totalProg = Math.round(teams.reduce((acc, t) => acc + (t.progress || 0), 0) / teams.length);
     report += `📊 全局进度：${totalProg}%\n`;
@@ -163,7 +184,7 @@ function App() {
     navigator.clipboard.writeText(report).then(() => {
       alert('✅ 日报已生成并复制到剪贴板！\n\n你可以直接去飞书/微信群粘贴了。');
     });
-  };
+  }, [teams]);
 
   const handleSavePage = () => {
     alert('✅ 在 TypeScript 版本中，请使用"备份数据"功能导出 JSON，然后分享给同事。');
@@ -229,13 +250,13 @@ function App() {
     });
   };
   
-  const handleRemoveGalleryImage = (idx: number) => {
+  const handleRemoveGalleryImage = useCallback((idx: number) => {
     setEditingGroup(prev => prev ? ({ ...prev, images: prev.images.filter((_, i) => i !== idx) }) : null);
-  };
+  }, []);
   
-  const triggerFileUpload = () => fileInputRef.current?.click();
-  const triggerGroupImgUpload = () => groupImgRef.current?.click();
-  const triggerGalleryUpload = () => galleryInputRef.current?.click();
+  const triggerFileUpload = useCallback(() => fileInputRef.current?.click(), []);
+  const triggerGroupImgUpload = useCallback(() => groupImgRef.current?.click(), []);
+  const triggerGalleryUpload = useCallback(() => galleryInputRef.current?.click(), []);
   
   const handleReset = () => {
     if (window.confirm('重置数据？')) {
@@ -370,7 +391,7 @@ function App() {
     setShowNewsModal(false);
   };
   
-  const handleDeleteNews = async (id: string) => {
+  const handleDeleteNews = useCallback(async (id: string) => {
     if (window.confirm('删除？')) {
       setNews(prev => prev.filter(n => n.id !== id));
       // 从 API 删除
@@ -383,9 +404,9 @@ function App() {
         }
       }
     }
-  };
+  }, [useLocalStorage]);
   
-  const handleExportData = () => {
+  const handleExportData = useCallback(() => {
     const data = { version: '11.0', timestamp: new Date().toISOString(), teams, news, announcement };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -396,7 +417,7 @@ function App() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-  };
+  }, [teams, news, announcement]);
   
   const handleAddTask = () => {
     if (!newTaskText.trim()) return;
@@ -407,28 +428,89 @@ function App() {
     setNewTaskText('');
   };
 
-  const toggleTask = (taskId: string) => {
+  const handleAddConsumption = useCallback((groupId: string, tier: 299 | 499, note?: string) => {
+    const newRecord = {
+      id: `cr-${Date.now()}`,
+      tier,
+      date: new Date().toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }),
+      note
+    };
+
+    setTeams(prev => prev.map(t => {
+      if (t.id === groupId) {
+        const newRecords = [...(t.consumptionRecords || []), newRecord];
+        // 自动计算实际消耗总额
+        const totalConsumption = newRecords.reduce((sum, record) => sum + record.tier, 0);
+        return {
+          ...t,
+          consumptionRecords: newRecords,
+          actualCost: totalConsumption
+        };
+      }
+      return t;
+    }));
+
+    // 保存到 API
+    if (!useLocalStorage) {
+      const updatedTeam = teams.find(t => t.id === groupId);
+      if (updatedTeam) {
+        const newRecords = [...(updatedTeam.consumptionRecords || []), newRecord];
+        const totalConsumption = newRecords.reduce((sum, record) => sum + record.tier, 0);
+        teamsAPI.update({
+          ...updatedTeam,
+          consumptionRecords: newRecords,
+          actualCost: totalConsumption
+        }).then(() => console.log('✅ 消费记录已保存')).catch(err => console.error('保存失败:', err));
+      }
+    }
+  }, [teams, useLocalStorage]);
+
+  const toggleTask = useCallback((taskId: string) => {
     setEditingGroup(prev => prev ? ({
       ...prev,
       todos: prev.todos.map(t => t.id === taskId ? { ...t, done: !t.done } : t)
     }) : null);
-  };
+  }, []);
 
-  const deleteTask = (taskId: string) => {
+  const deleteTask = useCallback((taskId: string) => {
     setEditingGroup(prev => prev ? ({
       ...prev,
       todos: prev.todos.filter(t => t.id !== taskId)
     }) : null);
-  };
+  }, []);
 
-  const totalMembers = teams.reduce((acc, t) => acc + t.members.length, 0);
-  const totalProgress = Math.round(teams.reduce((acc, t) => acc + (t.progress || 0), 0) / teams.length);
-  const totalBudget = teams.reduce((acc, t) => acc + Number(t.budget || 0), 0);
-  const totalCost = teams.reduce((acc, t) => acc + Number(t.actualCost || 0), 0);
-  const filteredTeams = teams.filter(t => 
-    t.title.includes(searchTerm) || t.members.some(m => m.name.includes(searchTerm))
+  // 使用 useMemo 缓存计算密集型的值，避免每次渲染都重新计算
+  const totalMembers = useMemo(() => 
+    teams.reduce((acc, t) => acc + t.members.length, 0), 
+    [teams]
   );
-  const filteredNews = newsFilter === 'all' ? news : news.filter(n => n.type === newsFilter);
+  
+  const totalProgress = useMemo(() => 
+    teams.length > 0 ? Math.round(teams.reduce((acc, t) => acc + (t.progress || 0), 0) / teams.length) : 0,
+    [teams]
+  );
+  
+  const totalBudget = useMemo(() => 
+    teams.reduce((acc, t) => acc + Number(t.budget || 0), 0),
+    [teams]
+  );
+  
+  const totalCost = useMemo(() => 
+    teams.reduce((acc, t) => acc + Number(t.actualCost || 0), 0),
+    [teams]
+  );
+  
+  const filteredTeams = useMemo(() => 
+    teams.filter(t => 
+      t.title.includes(searchTerm) || t.members.some(m => m.name.includes(searchTerm))
+    ),
+    [teams, searchTerm]
+  );
+  
+  const filteredNews = useMemo(() => 
+    newsFilter === 'all' ? news : news.filter(n => n.type === newsFilter),
+    [news, newsFilter]
+  );
 
   // 加载中界面
   if (loading) {
@@ -594,7 +676,7 @@ function App() {
               <span className="text-[10px] text-slate-500 font-mono tracking-widest uppercase">Project Alpha-1</span>
             </div>
             <h1 className="text-4xl md:text-6xl font-black text-white tracking-tight leading-none">
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-slate-100 via-slate-400 to-slate-500">AIGC 漫剧</span>
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-slate-100 via-slate-400 to-slate-500">AIGC</span>
               <span className="text-orange-500">制作中台 🚀</span>
             </h1>
           </div>
@@ -709,6 +791,7 @@ function App() {
                   alert('密码错误！');
                 }
               }}
+              onAddConsumption={handleAddConsumption}
             />
           ))}
         </div>

@@ -24,6 +24,13 @@ export interface ResourceLink {
   url: string;
 }
 
+export interface ConsumptionRecord {
+  id: string;
+  tier: 299 | 499;  // 299档或499档
+  date: string;      // 日期
+  note?: string;     // 可选备注
+}
+
 export interface Team {
   id: string;
   title: string;
@@ -42,6 +49,7 @@ export interface Team {
   todos: Todo[];
   members: Member[];
   password?: string; // 团队管理员密码
+  consumptionRecords?: ConsumptionRecord[]; // 即梦账号消费记录
 }
 
 export interface News {
