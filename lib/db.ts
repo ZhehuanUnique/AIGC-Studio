@@ -6,8 +6,18 @@ import { createPool } from '@vercel/postgres';
  */
 
 // 显式创建数据库连接池
+// 尝试多个可能的环境变量名
+const connectionString = 
+  process.env.POSTGRES_URL || 
+  process.env.DATABASE_URL || 
+  process.env.POSTGRES_PRISMA_URL;
+
+if (!connectionString) {
+  throw new Error('Database connection string not found. Please check environment variables.');
+}
+
 const db = createPool({
-  connectionString: process.env.POSTGRES_URL,
+  connectionString,
 });
 
 export const sql = db.sql;
