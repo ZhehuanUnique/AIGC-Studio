@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
-  Search, Plus, Trash2, X, Image as ImageIcon, Save, RefreshCw, Upload, Zap,
+  Search, Plus, Trash2, X, Image as ImageIcon, Save, RefreshCw, Upload,
   CheckCircle, CheckSquare, Globe, ListTodo, Square,
   Download, FileJson, ClipboardList, Unlock,
   Wrench, Megaphone
@@ -749,8 +749,8 @@ function App() {
         )}
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="w-8 h-8 bg-gradient-to-br from-purple-600 to-pink-700 rounded-lg flex items-center justify-center shadow-lg text-white animate-pulse">
-              <Zap size={16} className="fill-current" />
+            <div className="w-10 h-10 rounded-lg overflow-hidden shadow-lg">
+              <img src="/logo.png" alt="剧变时代" className="w-full h-full object-cover" />
             </div>
             <div className="hidden md:block text-sm font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400 tracking-widest uppercase">剧变时代</div>
             <div className="hidden md:flex bg-slate-900 rounded-lg p-1 border border-slate-800">
@@ -936,7 +936,7 @@ function App() {
                 rel="noreferrer"
                 className="flex items-center gap-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white px-3 py-1.5 rounded-lg font-bold text-xs transition-all shadow-lg shadow-emerald-900/20 mr-2"
               >
-                <Search size={12} /> 🔍 搜剧查查榜单
+                <Search size={12} />剧查查榜单
               </a>
               <div className="flex bg-slate-900 p-1 rounded-lg border border-slate-800">
                 <button
