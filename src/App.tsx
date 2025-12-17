@@ -124,7 +124,7 @@ function App() {
       if (isAdminUnlocked) {
         setIsEditing(true);
       } else {
-        const pin = prompt('请输入管理员密码 (默认: 8888):');
+        const pin = prompt('请输入管理员密码:');
         if (pin === '8888') {
           setIsAdminUnlocked(true);
           setIsEditing(true);
@@ -567,15 +567,18 @@ function App() {
       </div>
 
       {isEditing && (
-        <div className="bg-slate-900 border-b border-slate-800 py-2">
+        <div className="bg-orange-950/50 border-b-4 border-orange-500 py-4 shadow-lg shadow-orange-500/20">
           <div className="max-w-7xl mx-auto px-6 flex items-center gap-4">
-            <label className="text-xs text-orange-400 font-bold whitespace-nowrap">发布通告:</label>
+            <label className="text-base text-orange-300 font-bold whitespace-nowrap flex items-center gap-2">
+              <Megaphone size={18} />
+              发布通告:
+            </label>
             <input
               type="text"
-              className="flex-1 bg-slate-700 border-2 border-orange-500/40 rounded px-3 py-2 text-sm text-white placeholder:text-slate-400 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 outline-none transition-all"
+              className="flex-1 bg-white/95 border-3 border-orange-400 rounded-lg px-4 py-3 text-base text-slate-900 font-medium placeholder:text-slate-400 focus:border-orange-500 focus:ring-4 focus:ring-orange-500/30 outline-none transition-all shadow-md"
               value={announcement}
               onChange={(e) => setAnnouncement(e.target.value)}
-              placeholder="输入公告内容..."
+              placeholder="✏️ 在此输入公告内容..."
             />
           </div>
         </div>
