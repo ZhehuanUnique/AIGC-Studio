@@ -2,7 +2,7 @@ import React from 'react';
 import { 
   Edit2, Target, Clock, Activity, Wallet, TrendingDown, ListTodo, 
   CheckSquare, Square, Users, Plus, Image as ImageIcon, Upload, 
-  Link as LinkIcon, Receipt, Lock, Unlock 
+  Link as LinkIcon, Receipt, Lock, Unlock, Trash2 
 } from 'lucide-react';
 import { Team, Member } from '../types';
 import { ICON_MAP } from '../constants';
@@ -17,10 +17,12 @@ interface DepartmentSectionProps {
   index: number;
   isEditing: boolean;
   isUnlocked: boolean;
+  theme: 'dark' | 'blue' | 'white' | 'green';
   onEditMember: (member: Member) => void;
   onAddMember: (groupId: string) => void;
   onEditGroup: (group: Team) => void;
   onAddConsumption?: (groupId: string) => void;
+  onDeleteConsumption?: (groupId: string, recordId: string) => void;
   onToggleLock: (team: Team) => void;
 }
 
@@ -29,10 +31,12 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
   index,
   isEditing,
   isUnlocked,
+  theme,
   onEditMember,
   onAddMember,
   onEditGroup,
   onAddConsumption,
+  onDeleteConsumption,
   onToggleLock
 }) => {
   const Icon = ICON_MAP[team.iconKey] || ICON_MAP['default'];
@@ -43,10 +47,40 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
   const budgetColor = isOverBudget ? 'text-red-500' : 'text-slate-300';
   const costColor = isOverBudget ? 'text-red-400' : 'text-emerald-400';
 
+  // 主题配置
+  const themeStyles = {
+    dark: { 
+      card: 'bg-[#0f172a]', 
+      subCard: 'bg-[#1e293b]/50',
+      border: 'border-slate-800',
+      text: 'text-slate-200'
+    },
+    blue: { 
+      card: 'bg-blue-900/50', 
+      subCard: 'bg-blue-800/30',
+      border: 'border-blue-700',
+      text: 'text-blue-50'
+    },
+    white: { 
+      card: 'bg-white', 
+      subCard: 'bg-gray-50',
+      border: 'border-gray-300',
+      text: 'text-gray-800'
+    },
+    green: { 
+      card: 'bg-emerald-900/50', 
+      subCard: 'bg-emerald-800/30',
+      border: 'border-emerald-700',
+      text: 'text-emerald-50'
+    }
+  };
+  
+  const currentTheme = themeStyles[theme];
+
   return (
-    <div className={`mb-8 bg-[#0f172a] border ${
-      team.status === 'urgent' ? 'border-red-900/30' : 'border-slate-800'
-    } rounded-2xl p-6 relative overflow-hidden animate-in fade-in slide-in-from-bottom-8 duration-700`}>
+    <div className={`mb-8 ${currentTheme.card} border ${
+      team.status === 'urgent' ? 'border-red-900/30' : currentTheme.border
+    } rounded-2xl p-6 relative overflow-hidden animate-in fade-in slide-in-from-bottom-8 duration-700 transition-colors`}>
       <div className="absolute -top-6 -right-6 text-9xl font-black text-slate-800/20 pointer-events-none select-none">
         0{index + 1}
       </div>
@@ -97,41 +131,19 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
           </div>
         </div>
         
-        <div className="flex-1 flex flex-col gap-2">
+        <div className="flex-1 flex flex-col gap-3">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-            <div className="bg-[#1e293b]/50 rounded-lg p-2 px-3 border border-slate-800 flex items-center gap-3">
-              <div className="p-1.5 bg-orange-500/10 rounded text-orange-500">
-                <Target size={12} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-[9px] text-slate-500 uppercase font-bold">Mission</div>
-                <div className="text-xs text-slate-300 truncate" title={team.task}>
-                  {team.task || '-'}
-                </div>
-              </div>
-            </div>
-            <div className="bg-[#1e293b]/50 rounded-lg p-2 px-3 border border-slate-800 flex items-center gap-3">
-              <div className="p-1.5 bg-emerald-500/10 rounded text-emerald-500">
-                <Clock size={12} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-[9px] text-slate-500 uppercase font-bold">Cycle</div>
-                <div className="text-xs text-slate-300 truncate">{team.cycle || '-'}</div>
-              </div>
-            </div>
             <div className="bg-[#1e293b]/50 rounded-lg p-2 px-3 border border-slate-800 flex items-center gap-3">
               <div className="p-1.5 bg-blue-500/10 rounded text-blue-500">
                 <Activity size={12} />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-[9px] text-slate-500 uppercase font-bold">Daily Load</div>
+                <div className="text-[9px] text-slate-500 uppercase font-bold">每日交付</div>
                 <div className="text-xs text-slate-300 truncate" title={team.workload}>
                   {team.workload || '-'}
                 </div>
               </div>
             </div>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
             <div className={`rounded-lg p-2 px-3 border border-slate-800 flex items-center gap-3 ${
               isOverBudget ? 'bg-red-900/10 border-red-900/30' : 'bg-[#1e293b]/50'
             }`}>
@@ -139,7 +151,7 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
                 <Wallet size={12} />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-[9px] text-slate-500 uppercase font-bold">Budget (预期)</div>
+                <div className="text-[9px] text-slate-500 uppercase font-bold">预期</div>
                 <div className={`text-lg font-mono font-bold ${budgetColor}`}>¥ {team.budget || 0}</div>
               </div>
             </div>
@@ -152,19 +164,20 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
                 <TrendingDown size={12} />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-[9px] text-slate-500 uppercase font-bold">Actual Cost (实耗)</div>
+                <div className="text-[9px] text-slate-500 uppercase font-bold">实耗</div>
                 <div className={`text-lg font-mono font-bold ${costColor}`}>¥ {team.actualCost || 0}</div>
               </div>
             </div>
           </div>
-        </div>
-
-        <div className="w-full lg:w-48 flex flex-col justify-center gap-1.5">
-          <div className="flex justify-between text-[10px] text-slate-500 font-bold uppercase">
-            <span>Completion</span>
-            <span>{team.progress}%</span>
+          
+          {/* 进度条 - 占据整行 */}
+          <div className="w-full flex flex-col gap-1.5 bg-[#1e293b]/30 rounded-lg p-3 border border-slate-800">
+            <div className="flex justify-between text-[10px] text-slate-500 font-bold">
+              <span>进度</span>
+              <span>{team.progress}%</span>
+            </div>
+            <ProgressBar progress={team.progress} />
           </div>
-          <ProgressBar progress={team.progress} />
         </div>
       </div>
       
@@ -295,63 +308,69 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
           </div>
         </div>
         <div className="lg:col-span-3 flex flex-col gap-4">
-          <div className="bg-[#1e293b]/30 rounded-xl p-4 border border-slate-800">
-            <div className="text-[10px] text-slate-500 uppercase font-bold tracking-widest mb-3 flex items-center gap-2">
-              <LinkIcon size={12} /> Resources
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {team.links && team.links.length > 0 ? (
-                team.links.map((link, idx) => (
-                  <ResourceLink
-                    key={idx}
-                    name={link.name}
-                    url={link.url}
-                    isEditing={isEditing}
-                    onDelete={() => {}}
-                  />
-                ))
-              ) : (
-                <span className="text-xs text-slate-600 italic">暂无链接</span>
-              )}
-            </div>
-          </div>
-          <div className="bg-[#1e293b]/30 rounded-xl p-4 border border-slate-800 flex-1 flex flex-col min-h-[120px]">
-            <div className="flex items-center justify-between mb-2">
-              <div className="text-[10px] text-slate-500 uppercase font-bold tracking-widest flex items-center gap-2">
-                <Receipt size={12} /> 消耗即梦账号数
+          <div className="bg-[#1e293b]/30 rounded-xl p-5 border border-slate-800 flex-1 flex flex-col min-h-[180px]">
+            <div className="flex items-center justify-between mb-3">
+              <div className="text-[11px] text-slate-500 uppercase font-bold tracking-widest flex items-center gap-2">
+                <Receipt size={14} /> 账号支出
               </div>
               {isUnlocked && onAddConsumption && (
                 <button
                   onClick={() => onAddConsumption(team.id)}
-                  className="text-sky-500 hover:text-white transition-colors bg-sky-500/10 hover:bg-sky-500/20 rounded p-1"
-                  title="添加消费记录"
+                  className="text-sky-500 hover:text-white transition-colors bg-sky-500/10 hover:bg-sky-500/20 rounded-lg p-1.5"
+                  title="添加支出记录"
                 >
-                  <Plus size={12} />
+                  <Plus size={14} />
                 </button>
               )}
             </div>
-            <div className="flex-1 bg-slate-950/50 rounded-lg p-3 border border-slate-800/50 overflow-y-auto max-h-[200px]">
+            <div className="flex-1 bg-slate-950/50 rounded-lg p-3 border border-slate-800/50 overflow-y-auto max-h-[300px]">
               {team.consumptionRecords && team.consumptionRecords.length > 0 ? (
-                <div className="space-y-1.5">
-                  {team.consumptionRecords.map((record, idx) => (
-                    <div key={record.id} className="text-xs text-slate-400 font-mono flex items-start gap-2 bg-slate-900/30 rounded p-2 border border-slate-800/30">
-                      <span className="text-slate-600 font-bold">#{idx + 1}</span>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className={`font-bold ${record.tier === 299 ? 'text-blue-400' : 'text-purple-400'}`}>
-                            ¥{record.tier}
-                          </span>
-                          <span className="text-[10px] text-slate-600">{record.date}</span>
+                <div className="space-y-2">
+                  {team.consumptionRecords.map((record, idx) => {
+                    const platformNames = { jimeng: '即梦', hailuo: '海螺', vidu: 'Vidu' };
+                    const platformColors = { 
+                      jimeng: 'text-blue-400 bg-blue-500/10 border-blue-500/20', 
+                      hailuo: 'text-purple-400 bg-purple-500/10 border-purple-500/20', 
+                      vidu: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' 
+                    };
+                    const amountColors = {
+                      299: 'text-blue-400',
+                      499: 'text-purple-400',
+                      1399: 'text-orange-400'
+                    };
+                    
+                    return (
+                      <div key={record.id} className="text-xs text-slate-400 font-mono flex items-start gap-2 bg-slate-900/30 rounded-lg p-2.5 border border-slate-800/30 hover:border-slate-700/50 transition-colors">
+                        <span className="text-slate-600 font-bold text-[10px] mt-0.5">#{idx + 1}</span>
+                        <div className="flex-1 space-y-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${platformColors[record.platform]}`}>
+                              {platformNames[record.platform]}
+                            </span>
+                            <span className={`font-bold ${amountColors[record.amount as keyof typeof amountColors] || 'text-sky-400'}`}>
+                              ¥{record.amount}
+                            </span>
+                            <span className="text-[10px] text-slate-600">{record.datetime}</span>
+                          </div>
+                          {record.note && (
+                            <div className="text-[10px] text-slate-500 italic">{record.note}</div>
+                          )}
                         </div>
-                        {record.note && (
-                          <div className="text-[10px] text-slate-500 mt-0.5 italic">{record.note}</div>
+                        {isUnlocked && onDeleteConsumption && (
+                          <button
+                            onClick={() => onDeleteConsumption(team.id, record.id)}
+                            className="text-red-500/50 hover:text-red-400 hover:bg-red-500/10 rounded p-1 transition-colors"
+                            title="删除此记录"
+                          >
+                            <Trash2 size={12} />
+                          </button>
                         )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
-                <p className="text-xs text-slate-700 italic">暂无消费记录...</p>
+                <p className="text-xs text-slate-700 italic">暂无支出记录...</p>
               )}
             </div>
           </div>

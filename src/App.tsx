@@ -56,7 +56,8 @@ function App() {
   const [showNewsModal, setShowNewsModal] = useState<boolean>(false);
   const [showConsumptionModal, setShowConsumptionModal] = useState<boolean>(false);
   const [currentGroupId, setCurrentGroupId] = useState<string>('');
-  const [consumptionTier, setConsumptionTier] = useState<299 | 499>(299);
+  const [consumptionPlatform, setConsumptionPlatform] = useState<'jimeng' | 'hailuo' | 'vidu'>('jimeng');
+  const [consumptionPackage, setConsumptionPackage] = useState<'jimeng-299' | 'jimeng-499' | 'hailuo-1399' | 'vidu-499'>('jimeng-299');
   const [consumptionNote, setConsumptionNote] = useState<string>('');
   const [newLinkName, setNewLinkName] = useState<string>('');
   const [newLinkUrl, setNewLinkUrl] = useState<string>('');
@@ -557,19 +558,77 @@ function App() {
   // 打开添加消费记录的模态框
   const openAddConsumptionModal = useCallback((groupId: string) => {
     setCurrentGroupId(groupId);
-    setConsumptionTier(299);
+    setConsumptionPlatform('jimeng');
+    setConsumptionPackage('jimeng-299');
     setConsumptionNote('');
     setShowConsumptionModal(true);
   }, []);
 
-  // 实际添加消费记录
+  // 删除账号支出记录
+  const handleDeleteConsumptionRecord = useCallback(async (groupId: string, recordId: string) => {
+    setTeams(prev => prev.map(t => {
+      if (t.id === groupId) {
+        const newRecords = (t.consumptionRecords || []).filter(r => r.id !== recordId);
+        // 重新计算总消耗
+        const totalConsumption = newRecords.reduce((sum, record) => sum + record.amount, 0);
+        return {
+          ...t,
+          consumptionRecords: newRecords,
+          actualCost: totalConsumption
+        };
+      }
+      return t;
+    }));
+
+    // 保存到 API
+    if (!useLocalStorage) {
+      const updatedTeam = teams.find(t => t.id === groupId);
+      if (updatedTeam) {
+        const newRecords = (updatedTeam.consumptionRecords || []).filter(r => r.id !== recordId);
+        const totalConsumption = newRecords.reduce((sum, record) => sum + record.amount, 0);
+        try {
+          await teamsAPI.update({
+            ...updatedTeam,
+            consumptionRecords: newRecords,
+            actualCost: totalConsumption
+          });
+          console.log('✅ 记录已删除');
+        } catch (err) {
+          console.error('删除失败:', err);
+        }
+      }
+    }
+  }, [teams, useLocalStorage]);
+
+  // 实际添加账号支出记录
   const handleSaveConsumption = useCallback(async () => {
     if (!currentGroupId) return;
 
+    // 获取金额
+    const amountMap = {
+      'jimeng-299': 299,
+      'jimeng-499': 499,
+      'hailuo-1399': 1399,
+      'vidu-499': 499
+    };
+    const amount = amountMap[consumptionPackage];
+
+    // 生成日期+时间
+    const now = new Date();
+    const datetime = now.toLocaleString('zh-CN', { 
+      month: '2-digit', 
+      day: '2-digit', 
+      hour: '2-digit', 
+      minute: '2-digit',
+      hour12: false 
+    });
+
     const newRecord = {
       id: `cr-${Date.now()}`,
-      tier: consumptionTier,
-      date: new Date().toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }),
+      platform: consumptionPlatform,
+      package: consumptionPackage,
+      amount: amount,
+      datetime: datetime,
       note: consumptionNote.trim() || undefined
     };
 
@@ -577,7 +636,7 @@ function App() {
       if (t.id === currentGroupId) {
         const newRecords = [...(t.consumptionRecords || []), newRecord];
         // 自动计算实际消耗总额
-        const totalConsumption = newRecords.reduce((sum, record) => sum + record.tier, 0);
+        const totalConsumption = newRecords.reduce((sum, record) => sum + record.amount, 0);
         return {
           ...t,
           consumptionRecords: newRecords,
@@ -592,22 +651,26 @@ function App() {
       const updatedTeam = teams.find(t => t.id === currentGroupId);
       if (updatedTeam) {
         const newRecords = [...(updatedTeam.consumptionRecords || []), newRecord];
-        const totalConsumption = newRecords.reduce((sum, record) => sum + record.tier, 0);
+        const totalConsumption = newRecords.reduce((sum, record) => sum + record.amount, 0);
         try {
           await teamsAPI.update({
             ...updatedTeam,
             consumptionRecords: newRecords,
             actualCost: totalConsumption
           });
-          console.log('✅ 消费记录已保存');
+          console.log('✅ 账号支出记录已保存');
         } catch (err) {
           console.error('保存失败:', err);
         }
       }
     }
 
+    // 重置表单并关闭
+    setConsumptionPlatform('jimeng');
+    setConsumptionPackage('jimeng-299');
+    setConsumptionNote('');
     setShowConsumptionModal(false);
-  }, [currentGroupId, consumptionTier, consumptionNote, teams, useLocalStorage]);
+  }, [currentGroupId, consumptionPlatform, consumptionPackage, consumptionNote, teams, useLocalStorage]);
 
   const toggleTask = useCallback((taskId: string) => {
     setEditingGroup(prev => prev ? ({
@@ -689,7 +752,7 @@ function App() {
             <div className="w-8 h-8 bg-gradient-to-br from-purple-600 to-pink-700 rounded-lg flex items-center justify-center shadow-lg text-white animate-pulse">
               <Zap size={16} className="fill-current" />
             </div>
-            <div className="hidden md:block text-sm font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400 tracking-widest uppercase">AIGC STUDIO ⚡</div>
+            <div className="hidden md:block text-sm font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400 tracking-widest uppercase">剧变时代</div>
             <div className="hidden md:flex bg-slate-900 rounded-lg p-1 border border-slate-800">
               {PROJECT_PHASES.map((phase, idx) => (
                 <button
@@ -837,8 +900,8 @@ function App() {
               <span className="text-[10px] text-slate-500 font-mono tracking-widest uppercase">Project Alpha-1</span>
             </div>
             <h1 className="text-4xl md:text-6xl font-black text-white tracking-tight leading-none">
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-slate-100 via-slate-400 to-slate-500">AIGC</span>
-              <span className="text-orange-500">制作中台 🚀</span>
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-slate-100 via-slate-400 to-slate-500">剧变时代</span>
+              <span className="text-orange-500">中控台</span>
             </h1>
           </div>
           <div className="flex gap-4">
@@ -941,6 +1004,7 @@ function App() {
               index={index}
               isEditing={isAdminUnlocked}
               isUnlocked={unlockedGroups.has(team.id) || isAdminUnlocked}
+              theme={theme}
               onEditMember={openEditMemberModal}
               onAddMember={openAddMemberModal}
               onEditGroup={(group) => {
@@ -948,6 +1012,7 @@ function App() {
                 setShowGroupModal(true);
               }}
               onAddConsumption={openAddConsumptionModal}
+              onDeleteConsumption={handleDeleteConsumptionRecord}
               onToggleLock={toggleGroupLock}
             />
           ))}
@@ -1378,60 +1443,134 @@ function App() {
         )}
       </Modal>
 
-      {/* 添加消费记录模态框 */}
+      {/* 添加账号支出记录模态框 */}
       <Modal
         isOpen={showConsumptionModal}
         onClose={() => setShowConsumptionModal(false)}
-        title="添加即梦账号消费记录"
+        title="添加账号支出记录"
       >
-        <div className="space-y-4">
+        <div className="space-y-5">
+          {/* 平台选择 */}
           <div>
-            <label className="block text-xs font-bold text-slate-400 mb-2">选择档位</label>
-            <div className="grid grid-cols-2 gap-3">
+            <label className="block text-xs font-bold text-slate-400 mb-3">选择平台</label>
+            <div className="grid grid-cols-3 gap-3">
               <button
-                onClick={() => setConsumptionTier(299)}
-                className={`p-4 rounded-lg border-2 transition-all ${
-                  consumptionTier === 299
-                    ? 'border-blue-500 bg-blue-500/10 text-blue-400'
+                onClick={() => {
+                  setConsumptionPlatform('jimeng');
+                  setConsumptionPackage('jimeng-299');
+                }}
+                className={`p-3 rounded-lg border-2 transition-all ${
+                  consumptionPlatform === 'jimeng'
+                    ? 'border-blue-500 bg-blue-500/20 text-blue-300'
                     : 'border-slate-700 bg-slate-900 text-slate-400 hover:border-slate-600'
                 }`}
               >
-                <div className="text-2xl font-bold">¥299</div>
-                <div className="text-xs mt-1">标准档</div>
+                <div className="text-base font-bold">即梦</div>
               </button>
               <button
-                onClick={() => setConsumptionTier(499)}
-                className={`p-4 rounded-lg border-2 transition-all ${
-                  consumptionTier === 499
-                    ? 'border-purple-500 bg-purple-500/10 text-purple-400'
+                onClick={() => {
+                  setConsumptionPlatform('hailuo');
+                  setConsumptionPackage('hailuo-1399');
+                }}
+                className={`p-3 rounded-lg border-2 transition-all ${
+                  consumptionPlatform === 'hailuo'
+                    ? 'border-purple-500 bg-purple-500/20 text-purple-300'
                     : 'border-slate-700 bg-slate-900 text-slate-400 hover:border-slate-600'
                 }`}
               >
-                <div className="text-2xl font-bold">¥499</div>
-                <div className="text-xs mt-1">高级档</div>
+                <div className="text-base font-bold">海螺</div>
+              </button>
+              <button
+                onClick={() => {
+                  setConsumptionPlatform('vidu');
+                  setConsumptionPackage('vidu-499');
+                }}
+                className={`p-3 rounded-lg border-2 transition-all ${
+                  consumptionPlatform === 'vidu'
+                    ? 'border-emerald-500 bg-emerald-500/20 text-emerald-300'
+                    : 'border-slate-700 bg-slate-900 text-slate-400 hover:border-slate-600'
+                }`}
+              >
+                <div className="text-base font-bold">Vidu</div>
               </button>
             </div>
           </div>
+
+          {/* 套餐选择 */}
+          <div>
+            <label className="block text-xs font-bold text-slate-400 mb-3">选择套餐</label>
+            {consumptionPlatform === 'jimeng' && (
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => setConsumptionPackage('jimeng-299')}
+                  className={`p-4 rounded-lg border-2 transition-all ${
+                    consumptionPackage === 'jimeng-299'
+                      ? 'border-blue-500 bg-blue-500/10 text-blue-400'
+                      : 'border-slate-700 bg-slate-900 text-slate-400 hover:border-slate-600'
+                  }`}
+                >
+                  <div className="text-2xl font-bold">¥299</div>
+                  <div className="text-xs mt-1">首次充值</div>
+                </button>
+                <button
+                  onClick={() => setConsumptionPackage('jimeng-499')}
+                  className={`p-4 rounded-lg border-2 transition-all ${
+                    consumptionPackage === 'jimeng-499'
+                      ? 'border-purple-500 bg-purple-500/10 text-purple-400'
+                      : 'border-slate-700 bg-slate-900 text-slate-400 hover:border-slate-600'
+                  }`}
+                >
+                  <div className="text-2xl font-bold">¥499</div>
+                  <div className="text-xs mt-1">二次充值</div>
+                </button>
+              </div>
+            )}
+            {consumptionPlatform === 'hailuo' && (
+              <button
+                onClick={() => setConsumptionPackage('hailuo-1399')}
+                className="w-full p-4 rounded-lg border-2 border-purple-500 bg-purple-500/10 text-purple-400"
+              >
+                <div className="text-2xl font-bold">¥1399</div>
+                <div className="text-xs mt-1">海螺套餐</div>
+              </button>
+            )}
+            {consumptionPlatform === 'vidu' && (
+              <button
+                onClick={() => setConsumptionPackage('vidu-499')}
+                className="w-full p-4 rounded-lg border-2 border-emerald-500 bg-emerald-500/10 text-emerald-400"
+              >
+                <div className="text-2xl font-bold">¥499</div>
+                <div className="text-xs mt-1">Vidu套餐</div>
+              </button>
+            )}
+          </div>
+
+          {/* 备注 */}
           <div>
             <label className="block text-xs font-bold text-slate-400 mb-2">备注 (可选)</label>
             <textarea
               value={consumptionNote}
               onChange={(e) => setConsumptionNote(e.target.value)}
-              placeholder="例如：首次充值、高级功能等..."
+              placeholder="例如：用于XX项目、测试账号等..."
               className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 placeholder-slate-600 outline-none focus:border-sky-500 resize-none"
               rows={3}
             />
           </div>
-          <div className="flex justify-end gap-2 pt-2">
+
+          {/* 按钮 */}
+          <div className="flex justify-end gap-3 pt-2">
             <button
-              onClick={() => setShowConsumptionModal(false)}
-              className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-bold text-sm transition-colors"
+              onClick={() => {
+                setShowConsumptionModal(false);
+                setConsumptionNote('');
+              }}
+              className="px-5 py-2.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-bold text-sm transition-colors"
             >
               取消
             </button>
             <button
               onClick={handleSaveConsumption}
-              className="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-lg font-bold text-sm shadow-lg transition-colors"
+              className="px-5 py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-lg font-bold text-sm shadow-lg transition-colors"
             >
               确认添加
             </button>
