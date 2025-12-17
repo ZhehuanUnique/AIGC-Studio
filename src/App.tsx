@@ -48,7 +48,7 @@ function App() {
   const [newLinkName, setNewLinkName] = useState<string>('');
   const [newLinkUrl, setNewLinkUrl] = useState<string>('');
   const [newTaskText, setNewTaskText] = useState<string>('');
-  const announcementTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const announcementTimerRef = useRef<number | null>(null);
 
   // 初始化：从 API 或 localStorage 加载数据
   useEffect(() => {
