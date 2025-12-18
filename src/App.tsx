@@ -15,6 +15,7 @@ import { InputField } from './components/InputField';
 import { NewsCard } from './components/NewsCard';
 import { DepartmentSection } from './components/DepartmentSection';
 import { teamsAPI, newsAPI, announcementAPI } from './utils/api';
+import { upload } from '@vercel/blob/client';
 
 interface EditingMember extends Member {
   currentGroupId?: string;
@@ -121,6 +122,69 @@ function App() {
       setShowConfirm(true);
       setConfirmCallback(() => resolve);
     });
+  }, []);
+
+  const isDataUrl = (value?: string) => typeof value === 'string' && value.startsWith('data:');
+  const isVercelBlobUrl = (value?: string) =>
+    typeof value === 'string' &&
+    (value.includes('.blob.vercel-storage.com') || value.includes('vercel-storage.com') || value.includes('blob.vercel.com'));
+
+  const deleteBlobByUrl = useCallback(async (url?: string) => {
+    if (!isVercelBlobUrl(url)) return;
+    try {
+      await fetch('/api/blob-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      });
+    } catch (e) {
+      // 不阻塞主流程：删除失败最多浪费一点存储
+      console.warn('旧 Blob 删除失败（可忽略）:', e);
+    }
+  }, []);
+
+  const dataUrlToBlob = (dataUrl: string): Blob => {
+    const [meta, base64] = dataUrl.split(',');
+    const mime = meta.match(/data:(.*?);base64/)?.[1] || 'application/octet-stream';
+    const binStr = atob(base64);
+    const len = binStr.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) bytes[i] = binStr.charCodeAt(i);
+    return new Blob([bytes], { type: mime });
+  };
+
+  // 迁移旧的 Base64(dataURL) 图片 -> Vercel Blob URL，避免 PUT /api/teams 触发 413
+  const migrateTeamMediaToBlob = useCallback(async (team: Team): Promise<Team> => {
+    let changed = false;
+    let coverImage = team.coverImage;
+    let images = team.images || [];
+
+    if (isDataUrl(coverImage)) {
+      const blobObj = await upload(`cover-${team.id}-${Date.now()}.png`, dataUrlToBlob(coverImage as string), {
+        access: 'public',
+        handleUploadUrl: '/api/upload',
+      });
+      coverImage = blobObj.url;
+      changed = true;
+    }
+
+    const newImages: string[] = [];
+    for (let i = 0; i < images.length; i++) {
+      const img = images[i];
+      if (isDataUrl(img)) {
+        const blobObj = await upload(`img-${team.id}-${Date.now()}-${i}.png`, dataUrlToBlob(img), {
+          access: 'public',
+          handleUploadUrl: '/api/upload',
+        });
+        newImages.push(blobObj.url);
+        changed = true;
+      } else {
+        newImages.push(img);
+      }
+    }
+    images = newImages;
+
+    return changed ? { ...team, coverImage, images } : team;
   }, []);
 
   // 初始化：从 API 或 localStorage 加载数据
@@ -351,49 +415,98 @@ function App() {
     e.target.value = '';
   };
   
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, targetSetter: React.Dispatch<React.SetStateAction<EditingMember | null>>) => {
+  const handleFileChange = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    targetSetter: React.Dispatch<React.SetStateAction<EditingMember | null>>
+  ) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      targetSetter(prev => prev ? ({ ...prev, avatar: reader.result as string }) : null);
-    };
-    reader.readAsDataURL(file);
+    try {
+      const blob = await upload(file.name, file, {
+        access: 'public',
+        handleUploadUrl: '/api/upload',
+      });
+      targetSetter(prev => {
+        if (!prev) return prev;
+        const oldUrl = prev.avatar;
+        // 先更新 UI，再异步清理旧图
+        if (oldUrl && oldUrl !== blob.url) deleteBlobByUrl(oldUrl);
+        return { ...prev, avatar: blob.url };
+      });
+    } catch (err) {
+      console.error('头像上传失败:', err);
+      customAlert('⚠️ 头像上传失败，请检查网络或稍后重试。');
+    } finally {
+      e.target.value = '';
+    }
   };
   
-  const handleGroupImgChange = (
+  const handleGroupImgChange = async (
     e: React.ChangeEvent<HTMLInputElement>,
     targetSetter: React.Dispatch<React.SetStateAction<Team | null>>
   ) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      targetSetter(prev => prev ? ({ ...prev, coverImage: reader.result as string }) : null);
-    };
-    reader.readAsDataURL(file);
+    try {
+      const blob = await upload(file.name, file, {
+        access: 'public',
+        handleUploadUrl: '/api/upload',
+      });
+      targetSetter(prev => {
+        if (!prev) return prev;
+        const oldUrl = prev.coverImage;
+        if (oldUrl && oldUrl !== blob.url) deleteBlobByUrl(oldUrl);
+        return { ...prev, coverImage: blob.url };
+      });
+    } catch (err) {
+      console.error('图片上传失败:', err);
+      customAlert('⚠️ 图片上传失败，请检查网络或稍后重试。');
+    } finally {
+      e.target.value = '';
+    }
   };
   
-  const handleGalleryImgChange = (
+  const handleGalleryImgChange = async (
     e: React.ChangeEvent<HTMLInputElement>,
     targetSetter: React.Dispatch<React.SetStateAction<Team | null>>
   ) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
-    files.forEach(file => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        targetSetter(prev => prev ? ({ ...prev, images: [...(prev.images || []), reader.result as string] }) : null);
-      };
-      reader.readAsDataURL(file);
-    });
+    try {
+      for (const file of files) {
+        const blob = await upload(file.name, file, {
+          access: 'public',
+          handleUploadUrl: '/api/upload',
+        });
+        targetSetter(prev => {
+          if (!prev) return prev;
+          const nextImages = [...(prev.images || []), blob.url];
+          // 辅助参考图库最多保留 2 张：超出的旧图自动清理（节省 Blob 存储）
+          const keep = nextImages.slice(-2);
+          const removed = nextImages.slice(0, Math.max(0, nextImages.length - 2));
+          removed.forEach((u) => deleteBlobByUrl(u));
+          return { ...prev, images: keep };
+        });
+      }
+    } catch (err) {
+      console.error('图库上传失败:', err);
+      customAlert('⚠️ 图片上传失败，请检查网络或稍后重试。');
+    } finally {
+      e.target.value = '';
+    }
   };
   
   const handleRemoveGalleryImage = useCallback(
     (idx: number, targetSetter: React.Dispatch<React.SetStateAction<Team | null>>) => {
-      targetSetter(prev => prev ? ({ ...prev, images: (prev.images || []).filter((_, i) => i !== idx) }) : null);
+      targetSetter(prev => {
+        if (!prev) return prev;
+        const list = prev.images || [];
+        const toRemove = list[idx];
+        if (toRemove) deleteBlobByUrl(toRemove);
+        return { ...prev, images: list.filter((_, i) => i !== idx) };
+      });
     },
-    []
+    [deleteBlobByUrl]
   );
   
   const triggerFileUpload = useCallback(() => fileInputRef.current?.click(), []);
@@ -569,34 +682,56 @@ function App() {
   const handleSaveReferences = useCallback(async () => {
     if (!editingReferencesGroup) return;
 
-    setTeams(prev => prev.map(t => t.id === editingReferencesGroup.id ? {
+    // 若历史数据里还残留 Base64(dataURL)，先迁移到 Blob（否则 /api/teams 可能 413）
+    let toSave = editingReferencesGroup;
+    try {
+      toSave = await migrateTeamMediaToBlob(editingReferencesGroup);
+      if (toSave !== editingReferencesGroup) {
+        setEditingReferencesGroup(toSave);
+      }
+    } catch (e) {
+      console.error('迁移参考图失败:', e);
+      customAlert('⚠️ 图片迁移失败，请稍后重试。');
+      return;
+    }
+
+    // 辅助参考图库最多保留 2 张：保存时兜底裁剪并清理多余 Blob
+    if (toSave.images && toSave.images.length > 2) {
+      const keep = toSave.images.slice(-2);
+      const removed = toSave.images.slice(0, toSave.images.length - 2);
+      removed.forEach((u) => deleteBlobByUrl(u));
+      toSave = { ...toSave, images: keep };
+      setEditingReferencesGroup(toSave);
+    }
+
+    setTeams(prev => prev.map(t => t.id === toSave.id ? {
       ...t,
-      coverImage: editingReferencesGroup.coverImage,
-      images: editingReferencesGroup.images
+      coverImage: toSave.coverImage,
+      images: toSave.images
     } : t));
 
     // 保存到 API
     if (!useLocalStorage) {
       try {
-        const existing = teams.find(t => t.id === editingReferencesGroup.id);
+        const existing = teams.find(t => t.id === toSave.id);
         if (existing) {
           await teamsAPI.update({
             ...existing,
-            coverImage: editingReferencesGroup.coverImage,
-            images: editingReferencesGroup.images
+            coverImage: toSave.coverImage,
+            images: toSave.images
           });
         } else {
-          await teamsAPI.update(editingReferencesGroup);
+          await teamsAPI.update(toSave);
         }
         console.log('✅ 参考图已保存');
       } catch (err) {
         console.error('参考图保存失败:', err);
-        alert('保存失败，请检查网络连接');
+        customAlert('⚠️ 保存失败，请检查网络连接或稍后再试。');
       }
     }
 
     setShowReferencesModal(false);
-  }, [editingReferencesGroup, teams, useLocalStorage]);
+  }, [editingReferencesGroup, teams, useLocalStorage, migrateTeamMediaToBlob, customAlert]);
   
   const openAddNewsModal = () => {
     setEditingNews({ id: '', title: '', date: '11-25', type: 'industry', priority: 'normal', url: '#' });

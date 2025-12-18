@@ -16,7 +16,14 @@ async function fetchAPI(endpoint: string, options: RequestInit = {}) {
       },
     });
 
-    const data = await response.json();
+    // 注意：后端可能返回非 JSON（例如 413 Request Entity Too Large 的 HTML/纯文本），不能直接 response.json()
+    const rawText = await response.text();
+    let data: any = null;
+    try {
+      data = rawText ? JSON.parse(rawText) : {};
+    } catch {
+      data = { message: rawText || '请求失败' };
+    }
 
     if (!response.ok) {
       throw new Error(data.message || '请求失败');
