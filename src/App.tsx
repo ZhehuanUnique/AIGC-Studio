@@ -129,6 +129,11 @@ function App() {
     typeof value === 'string' &&
     (value.includes('.blob.vercel-storage.com') || value.includes('vercel-storage.com') || value.includes('blob.vercel.com'));
 
+  const uniqueUploadName = (originalName: string, prefix: string) => {
+    const safe = (originalName || 'file').replace(/[^\w.\-]+/g, '_');
+    return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}-${safe}`;
+  };
+
   const deleteBlobByUrl = useCallback(async (url?: string) => {
     if (!isVercelBlobUrl(url)) return;
     try {
@@ -422,7 +427,7 @@ function App() {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      const blob = await upload(file.name, file, {
+      const blob = await upload(uniqueUploadName(file.name, 'avatar'), file, {
         access: 'public',
         handleUploadUrl: '/api/upload',
       });
@@ -448,7 +453,7 @@ function App() {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      const blob = await upload(file.name, file, {
+      const blob = await upload(uniqueUploadName(file.name, 'cover'), file, {
         access: 'public',
         handleUploadUrl: '/api/upload',
       });
@@ -474,7 +479,7 @@ function App() {
     if (!files.length) return;
     try {
       for (const file of files) {
-        const blob = await upload(file.name, file, {
+        const blob = await upload(uniqueUploadName(file.name, 'gallery'), file, {
           access: 'public',
           handleUploadUrl: '/api/upload',
         });
