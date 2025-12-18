@@ -296,7 +296,7 @@ export function JuchachaApp() {
               </button>
             </div>
             <div className="mt-2 text-[11px] text-slate-500">
-              提示：本页只是 UI 壳子。你把本地大模型服务地址给我（以及它的请求/返回格式），我就能把它真正连通成可用的 Agent。
+              提示：功能还在开发中...
             </div>
           </div>
         </div>

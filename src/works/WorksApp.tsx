@@ -71,8 +71,8 @@ export const WorksApp: React.FC = () => {
         <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:72px_72px] opacity-10" />
       </div>
 
-      {/* 顶部栏 */}
-      <div className="sticky top-0 z-20 bg-slate-950/75 backdrop-blur-xl border-b border-slate-800">
+      {/* 顶部栏（不吸顶） */}
+      <div className="bg-slate-950/75 backdrop-blur-xl border-b border-slate-800">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <a
             href="/"
@@ -100,7 +100,7 @@ export const WorksApp: React.FC = () => {
                 </span>
               </h1>
               <p className="mt-4 text-slate-400 max-w-2xl text-sm leading-relaxed">
-                这是效果版：滚动视差、卡片浮动、hover 动效、背景呼吸光晕。后续你给我每个作品的封面图/视频链接，我再把占位内容替换成真实素材。
+                测试版
               </p>
             </div>
 

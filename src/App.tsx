@@ -359,7 +359,7 @@ function App() {
     
     const password = input.trim(); // 去除前后空格
     
-    if (password === '8888') {
+    if (password === '2468') {
       // 管理员密码 - 解锁所有组
       setIsAdminUnlocked(true);
       const allGroupIds = new Set(teams.map(t => t.id));
@@ -370,7 +370,7 @@ function App() {
       setUnlockedGroups(prev => new Set(prev).add(groupId));
       customAlert(`✅ 已解锁【${group.title}】!`);
     } else {
-      customAlert(`❌ 密码错误！\n\n提示:\n• 该组密码: ${group.password}\n• 管理员密码: 8888\n• 您输入的: "${password}"`);
+      customAlert('❌ 密码错误！');
     }
   }, [unlockedGroups, isAdminUnlocked, teams, customPrompt, customAlert]);
 
@@ -1164,7 +1164,7 @@ function App() {
         <div className={`absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:60px_60px] ${theme === 'white' ? 'opacity-20' : 'opacity-10'} transition-opacity duration-500`}></div>
       </div>
       
-      <div className={`sticky top-0 z-50 ${themes[theme].bg}/90 backdrop-blur-xl border-b ${themes[theme].border}/80 shadow-lg transition-colors duration-500`}>
+      <div className={`${themes[theme].bg}/90 backdrop-blur-xl border-b ${themes[theme].border}/80 shadow-lg transition-colors duration-500`}>
         {announcement && (
           <div className="w-full bg-orange-900/20 border-b border-orange-500/10 text-xs text-orange-300 py-1 px-4 flex items-center justify-center gap-2 overflow-hidden whitespace-nowrap">
             <Megaphone size={12} className="animate-bounce text-orange-500" />
