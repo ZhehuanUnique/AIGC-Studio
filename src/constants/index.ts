@@ -45,7 +45,16 @@ export const INITIAL_TEAMS: Team[] = [
     consumptionRecords: [],
     todos: [{ id: 't1', text: '采集女主50句新干音', done: false }],
     members: [
-      { id: 'm7', name: '汪凯伦', isDirector: true, avatar: '', role: '总负责人' },
+      {
+        id: 'm7',
+        name: '汪凯伦',
+        isDirector: true,
+        avatar: '',
+        role: '总负责人',
+        projects: [
+          { name: '负责项目：Git 提交流程（点击复制）', url: 'git add -A && git commit -m "update" && git pull --rebase && git push' },
+        ],
+      },
       { id: 'm8', name: '何静雨', isDirector: false, avatar: '', role: '执行专员' },
       { id: 'm9', name: '彭家顺', isDirector: false, avatar: '', role: '执行专员' },
       { id: 'm10', name: '闫永亮', isDirector: false, avatar: '', role: '执行专员' },

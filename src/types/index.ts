@@ -17,6 +17,8 @@ export interface Member {
   isDirector: boolean;
   avatar: string;
   role: string;
+  // 总负责人可选：负责项目（支持网址或命令文本；命令会在 UI 中点击复制）
+  projects?: ResourceLink[];
 }
 
 export interface ResourceLink {

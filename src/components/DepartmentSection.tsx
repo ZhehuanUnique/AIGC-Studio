@@ -644,10 +644,10 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
                 <>
                   <img
                     src={team.coverImage}
-                    className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity"
+                    className="w-full h-full object-cover opacity-100"
                     alt="Cover"
                   />
-                  <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/90 to-transparent p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/70 to-transparent p-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     <p className="text-[9px] text-slate-300">Key Visual</p>
                   </div>
                 </>
