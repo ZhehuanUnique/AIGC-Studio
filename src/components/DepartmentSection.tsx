@@ -1,10 +1,10 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { 
   Edit2, Activity, Wallet, TrendingDown, ListTodo, 
   CheckSquare, Square, Users, Plus, Image as ImageIcon, Upload, 
   Receipt, Lock, Unlock, Trash2 
 } from 'lucide-react';
-import { Team, Member } from '../types';
+import { Team, Member, Todo } from '../types';
 import { ICON_MAP } from '../constants';
 import { StatusBadge } from './StatusBadge';
 import { ProgressBar } from './ProgressBar';
@@ -25,6 +25,10 @@ interface DepartmentSectionProps {
   onDeleteTodo?: (groupId: string, todoId: string) => void;
   onEditGroup: (group: Team) => void;
   onDeleteGroup?: (groupId: string, groupTitle?: string) => void;
+  memberTasks?: Record<string, Todo[]>;
+  onAddMemberTask?: (groupId: string, memberId: string, text: string) => void;
+  onToggleMemberTask?: (groupId: string, memberId: string, todoId: string) => void;
+  onDeleteMemberTask?: (groupId: string, memberId: string, todoId: string) => void;
   onEditReferences?: (group: Team) => void;
   onAddConsumption?: (groupId: string) => void;
   onDeleteConsumption?: (groupId: string, recordId: string) => void;
@@ -45,6 +49,10 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
   onDeleteTodo,
   onEditGroup,
   onDeleteGroup,
+  memberTasks,
+  onAddMemberTask,
+  onToggleMemberTask,
+  onDeleteMemberTask,
   onEditReferences,
   onAddConsumption,
   onDeleteConsumption,
@@ -53,8 +61,9 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
   const Icon = ICON_MAP[team.iconKey] || ICON_MAP['default'];
   const directors = team.members.filter(m => m.isDirector);
   const crew = team.members.filter(m => !m.isDirector);
-  const memberTodos = team.todos || [];
-  const memberPendingTodos = memberTodos.filter(t => !t.done);
+  const groupTodos = team.todos || [];
+  const groupPendingTodos = groupTodos.filter(t => !t.done);
+  const getMemberTodos = (memberId: string) => memberTasks?.[memberId] || [];
 
   const [deleteMode, setDeleteMode] = useState<boolean>(false);
   const canDeleteMembers = useMemo(() => isUnlocked && !!onDeleteMember, [isUnlocked, onDeleteMember]);
@@ -62,7 +71,26 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
 
   const [showTodosPopover, setShowTodosPopover] = useState<boolean>(false);
   const [newTodoText, setNewTodoText] = useState<string>('');
+  const [memberInputMap, setMemberInputMap] = useState<Record<string, string>>({});
   const canEditTodos = isUnlocked && !!onAddTodo && !!onDeleteTodo;
+  const todosCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const openTodosPopover = () => {
+    if (todosCloseTimerRef.current) {
+      clearTimeout(todosCloseTimerRef.current);
+      todosCloseTimerRef.current = null;
+    }
+    setShowTodosPopover(true);
+  };
+
+  const scheduleCloseTodosPopover = () => {
+    if (todosCloseTimerRef.current) clearTimeout(todosCloseTimerRef.current);
+    // 轻微延迟，避免用户移动鼠标去点浮窗/输入框时面板瞬间消失
+    todosCloseTimerRef.current = setTimeout(() => {
+      setShowTodosPopover(false);
+      todosCloseTimerRef.current = null;
+    }, 350);
+  };
   
   const isOverBudget = Number(team.actualCost) > Number(team.budget);
   const budgetColor = isOverBudget ? 'text-red-500' : 'text-slate-300';
@@ -122,7 +150,7 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
         </div>
       </button>
 
-      <div className="flex flex-col lg:flex-row lg:items-end gap-6 mb-8 relative z-10">
+      <div className="flex flex-col lg:flex-row lg:items-center gap-6 mb-8 relative z-10">
         <div className="flex items-center gap-4 min-w-[240px]">
           <div
             onClick={() => isUnlocked && onEditGroup(team)}
@@ -215,19 +243,19 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
         </div>
       </div>
       
-      {/* Pending Tasks：hover 展开浮窗显示全部任务；浮窗离开即消失 */}
-      {team.todos && (
+      {/* Pending Tasks：hover 展开浮窗显示全部任务；浮窗离开即消失（对外只展示“小组任务/总目标”） */}
+      {groupTodos && (
         <div
           className="mb-6 px-1 relative"
-          onMouseEnter={() => setShowTodosPopover(true)}
-          onMouseLeave={() => setShowTodosPopover(false)}
+          onMouseEnter={openTodosPopover}
+          onMouseLeave={scheduleCloseTodosPopover}
         >
           <div className="flex items-center gap-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 cursor-default select-none">
-            <ListTodo size={12} /> Pending Tasks ({team.todos.filter(t => !t.done).length})
+            <ListTodo size={12} /> Pending Tasks ({groupPendingTodos.length})
             <span className="text-[10px] text-slate-600 font-mono">(hover)</span>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-            {team.todos.slice(0, 3).map(todo => (
+            {groupTodos.slice(0, 3).map(todo => (
               <div
                 key={todo.id}
                 className={`task-item flex items-center gap-2 px-3 py-2 rounded border ${
@@ -249,28 +277,37 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
                 </span>
               </div>
             ))}
-            {team.todos.length > 3 && (
+            {groupTodos.length > 3 && (
               <div className="px-3 py-2 text-xs text-slate-500 italic flex items-center">
-                ... +{team.todos.length - 3} more
+                ... +{groupTodos.length - 3} more
               </div>
             )}
           </div>
 
           {showTodosPopover && (
-            <div className="absolute left-0 top-7 z-50 w-full max-w-[720px]">
+            <div
+              className="absolute left-0 top-7 z-50 w-full max-w-[720px]"
+              onMouseEnter={openTodosPopover}
+              onMouseLeave={scheduleCloseTodosPopover}
+            >
               <div className="bg-slate-950/95 backdrop-blur-xl border border-slate-800 rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
                 <div className="px-4 py-3 border-b border-slate-800 flex items-center justify-between">
                   <div className="text-xs font-bold text-slate-300 flex items-center gap-2">
                     <ListTodo size={14} className="text-sky-500" />
-                    全部任务（{team.todos.length}）
+                    全部任务
                   </div>
                   {canEditTodos && (
                     <div className="text-[10px] text-emerald-400 font-bold">已解锁：可新增/删除</div>
                   )}
                 </div>
 
+                {/* 小组任务（总目标） */}
+                <div className="px-4 pt-3 pb-2 text-[10px] text-slate-500 uppercase font-bold tracking-widest">
+                  小组任务（总目标）{groupTodos.length ? ` · ${groupTodos.length}` : ''}
+                </div>
+
                 {canEditTodos && (
-                  <div className="px-4 py-3 border-b border-slate-800 flex gap-2">
+                  <div className="px-4 pb-3 border-b border-slate-800 flex gap-2">
                     <input
                       value={newTodoText}
                       onChange={(e) => setNewTodoText(e.target.value)}
@@ -282,8 +319,9 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
                           setNewTodoText('');
                         }
                       }}
+                      onFocus={openTodosPopover}
                       className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-sky-500"
-                      placeholder="新增任务…（回车添加）"
+                      placeholder="新增小组任务…（回车添加）"
                     />
                     <button
                       type="button"
@@ -294,16 +332,16 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
                         setNewTodoText('');
                       }}
                       className="bg-sky-600 hover:bg-sky-500 text-white px-3 py-2 rounded-lg text-xs font-bold"
-                      title="添加任务"
+                      title="添加小组任务"
                     >
                       <Plus size={14} />
                     </button>
                   </div>
                 )}
 
-                <div className="max-h-[320px] overflow-y-auto custom-scrollbar p-3 space-y-2">
-                  {team.todos.length > 0 ? (
-                    team.todos.map((todo) => (
+                <div className="max-h-[220px] overflow-y-auto custom-scrollbar p-3 space-y-2">
+                  {groupTodos.length > 0 ? (
+                    groupTodos.map((todo) => (
                       <div
                         key={todo.id}
                         className={`flex items-center gap-2 px-3 py-2 rounded border ${
@@ -339,6 +377,96 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
                     <div className="text-center text-xs text-slate-600 py-6">暂无任务</div>
                   )}
                 </div>
+
+                {/* 成员任务 */}
+                <div className="px-4 pt-2 pb-2 text-[10px] text-slate-500 uppercase font-bold tracking-widest border-t border-slate-800">
+                  成员任务
+                </div>
+                <div className="max-h-[320px] overflow-y-auto custom-scrollbar px-3 pb-3 space-y-2">
+                  {team.members.map((m) => {
+                    const todos = getMemberTodos(m.id);
+                    const pending = todos.filter(t => !t.done).length;
+                    return (
+                      <div key={m.id} className="bg-slate-900/40 border border-slate-800 rounded-xl overflow-hidden">
+                        <div className="px-3 py-2 flex items-center justify-between">
+                          <div className="text-xs font-bold text-slate-200 truncate">
+                            {m.role || (m.isDirector ? '组长' : '成员')} · {m.name}
+                          </div>
+                          <div className="text-[10px] text-slate-500 font-mono">PENDING {pending}</div>
+                        </div>
+
+                        {isUnlocked && onAddMemberTask && (
+                          <div className="px-3 pb-2 flex gap-2">
+                            <input
+                              value={memberInputMap[m.id] || ''}
+                              onChange={(e) => setMemberInputMap(prev => ({ ...prev, [m.id]: e.target.value }))}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  const text = (memberInputMap[m.id] || '').trim();
+                                  if (!text) return;
+                                  onAddMemberTask(team.id, m.id, text);
+                                  setMemberInputMap(prev => ({ ...prev, [m.id]: '' }));
+                                }
+                              }}
+                              className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-sky-500"
+                              placeholder="新增成员任务…（回车添加）"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const text = (memberInputMap[m.id] || '').trim();
+                                if (!text) return;
+                                onAddMemberTask(team.id, m.id, text);
+                                setMemberInputMap(prev => ({ ...prev, [m.id]: '' }));
+                              }}
+                              className="bg-sky-600 hover:bg-sky-500 text-white px-3 py-2 rounded-lg text-xs font-bold"
+                              title="添加成员任务"
+                            >
+                              <Plus size={14} />
+                            </button>
+                          </div>
+                        )}
+
+                        <div className="px-3 pb-3 space-y-2">
+                          {todos.length ? (
+                            todos.map((t) => (
+                              <div
+                                key={t.id}
+                                className={`flex items-center gap-2 px-3 py-2 rounded border ${
+                                  t.done
+                                    ? 'bg-slate-900/30 border-slate-800/50 text-slate-600'
+                                    : 'bg-[#1e293b]/50 border-slate-700 text-slate-300'
+                                }`}
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() => onToggleMemberTask?.(team.id, m.id, t.id)}
+                                  className={`p-0.5 rounded ${t.done ? 'text-slate-600' : 'text-sky-500 hover:text-sky-400'}`}
+                                  title={t.done ? '取消完成' : '标记完成'}
+                                >
+                                  {t.done ? <CheckSquare size={14} /> : <Square size={14} />}
+                                </button>
+                                <span className={`text-xs ${t.done ? 'line-through' : ''}`}>{t.text}</span>
+                                {isUnlocked && (
+                                  <button
+                                    type="button"
+                                    onClick={() => onDeleteMemberTask?.(team.id, m.id, t.id)}
+                                    className="ml-auto text-red-500/70 hover:text-red-400 hover:bg-red-500/10 rounded p-1 transition-colors"
+                                    title="删除任务"
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
+                                )}
+                              </div>
+                            ))
+                          ) : (
+                            <div className="text-center text-xs text-slate-600 py-3">暂无成员任务</div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           )}
@@ -357,21 +485,21 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
                     isEditing={isEditing}
                     onClick={onEditMember}
                   />
-                  {/* Hover 任务浮窗：参考 Pending Tasks 的风格（数据为该组 todo） */}
+                  {/* Hover 任务浮窗：成员任务 */}
                   <div className="absolute left-0 top-[calc(100%+8px)] z-50 w-[320px] max-w-[80vw] opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity">
                     <div className="bg-slate-950/95 backdrop-blur-xl border border-slate-800 rounded-xl shadow-2xl overflow-hidden">
                       <div className="px-4 py-3 border-b border-slate-800 flex items-center justify-between">
                         <div className="text-xs font-bold text-slate-300 flex items-center gap-2">
                           <ListTodo size={14} className="text-sky-500" />
-                          {director.name} · 任务（{memberTodos.length}）
+                          {director.name} · 任务（{getMemberTodos(director.id).length}）
                         </div>
                         <div className="text-[10px] text-slate-500 font-mono">
-                          PENDING {memberPendingTodos.length}
+                          PENDING {getMemberTodos(director.id).filter(t => !t.done).length}
                         </div>
                       </div>
                       <div className="p-3 max-h-[220px] overflow-y-auto custom-scrollbar space-y-2">
-                        {memberTodos.length > 0 ? (
-                          memberTodos.map((todo) => (
+                        {getMemberTodos(director.id).length > 0 ? (
+                          getMemberTodos(director.id).map((todo) => (
                             <div
                               key={todo.id}
                               className={`flex items-center gap-2 px-3 py-2 rounded border ${
@@ -446,21 +574,21 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
                         isEditing={isEditing}
                         onClick={onEditMember}
                       />
-                      {/* Hover 任务浮窗：参考 Pending Tasks 的风格（数据为该组 todo） */}
+                      {/* Hover 任务浮窗：成员任务 */}
                       <div className="absolute left-0 top-[calc(100%+8px)] z-50 w-[320px] max-w-[80vw] opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity">
                         <div className="bg-slate-950/95 backdrop-blur-xl border border-slate-800 rounded-xl shadow-2xl overflow-hidden">
                           <div className="px-4 py-3 border-b border-slate-800 flex items-center justify-between">
                             <div className="text-xs font-bold text-slate-300 flex items-center gap-2">
                               <ListTodo size={14} className="text-sky-500" />
-                              {member.name} · 任务（{memberTodos.length}）
+                              {member.name} · 任务（{getMemberTodos(member.id).length}）
                             </div>
                             <div className="text-[10px] text-slate-500 font-mono">
-                              PENDING {memberPendingTodos.length}
+                              PENDING {getMemberTodos(member.id).filter(t => !t.done).length}
                             </div>
                           </div>
                           <div className="p-3 max-h-[220px] overflow-y-auto custom-scrollbar space-y-2">
-                            {memberTodos.length > 0 ? (
-                              memberTodos.map((todo) => (
+                            {getMemberTodos(member.id).length > 0 ? (
+                              getMemberTodos(member.id).map((todo) => (
                                 <div
                                   key={todo.id}
                                   className={`flex items-center gap-2 px-3 py-2 rounded border ${

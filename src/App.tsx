@@ -5,7 +5,7 @@ import {
   Download, FileJson, ClipboardList, Unlock,
   Wrench, Megaphone
 } from 'lucide-react';
-import { Team, News, Member, NewsType } from './types';
+import { Team, News, Member, NewsType, Todo } from './types';
 import { 
   STORAGE_KEY, INITIAL_ANNOUNCEMENT, INITIAL_NEWS, INITIAL_TEAMS,
   STATUS_CONFIG, NEWS_TAGS, AI_TOOLS, PROJECT_PHASES
@@ -23,6 +23,7 @@ interface EditingMember extends Member {
 
 function App() {
   const [teams, setTeams] = useState<Team[]>(INITIAL_TEAMS);
+  const [memberTasksByTeam, setMemberTasksByTeam] = useState<Record<string, Record<string, Todo[]>>>({});
   const [news, setNews] = useState<News[]>(INITIAL_NEWS);
   const [announcement, setAnnouncement] = useState<string>(INITIAL_ANNOUNCEMENT);
   const [isAdminUnlocked, setIsAdminUnlocked] = useState<boolean>(false);
@@ -737,6 +738,11 @@ function App() {
       next.delete(groupId);
       return next;
     });
+    setMemberTasksByTeam(prev => {
+      const next = { ...prev };
+      delete next[groupId];
+      return next;
+    });
 
     // 再同步到 API
     if (!useLocalStorage) {
@@ -806,6 +812,7 @@ function App() {
 
     // 先本地插入
     setTeams(prev => [...prev, newTeam]);
+    setMemberTasksByTeam(prev => ({ ...prev, [teamId]: {} }));
 
     // 再同步到 API（后端按 id upsert）
     if (!useLocalStorage) {
@@ -819,6 +826,46 @@ function App() {
 
     setShowAddTeamModal(false);
   }, [newTeamTitle, newTeamDirectorName, useLocalStorage, customAlert]);
+
+  const addMemberTask = useCallback((groupId: string, memberId: string, text: string) => {
+    const v = text.trim();
+    if (!v) return;
+    const id = `mt_${Date.now()}_${Math.random().toString(16).slice(2, 8)}`;
+    const todo: Todo = { id, text: v, done: false };
+    setMemberTasksByTeam(prev => {
+      const teamMap = prev[groupId] || {};
+      const list = teamMap[memberId] || [];
+      return { ...prev, [groupId]: { ...teamMap, [memberId]: [...list, todo] } };
+    });
+  }, []);
+
+  const toggleMemberTask = useCallback((groupId: string, memberId: string, todoId: string) => {
+    setMemberTasksByTeam(prev => {
+      const teamMap = prev[groupId] || {};
+      const list = teamMap[memberId] || [];
+      return {
+        ...prev,
+        [groupId]: {
+          ...teamMap,
+          [memberId]: list.map(t => t.id === todoId ? ({ ...t, done: !t.done }) : t),
+        },
+      };
+    });
+  }, []);
+
+  const deleteMemberTask = useCallback((groupId: string, memberId: string, todoId: string) => {
+    setMemberTasksByTeam(prev => {
+      const teamMap = prev[groupId] || {};
+      const list = teamMap[memberId] || [];
+      return {
+        ...prev,
+        [groupId]: {
+          ...teamMap,
+          [memberId]: list.filter(t => t.id !== todoId),
+        },
+      };
+    });
+  }, []);
 
   const handleSaveReferences = useCallback(async () => {
     if (!editingReferencesGroup) return;
@@ -1461,6 +1508,10 @@ function App() {
                 setShowGroupModal(true);
               }}
               onDeleteGroup={handleDeleteGroup}
+              memberTasks={memberTasksByTeam[team.id] || {}}
+              onAddMemberTask={addMemberTask}
+              onToggleMemberTask={toggleMemberTask}
+              onDeleteMemberTask={deleteMemberTask}
               onEditReferences={openEditReferencesModal}
               onAddConsumption={openAddConsumptionModal}
               onDeleteConsumption={handleDeleteConsumptionRecord}
