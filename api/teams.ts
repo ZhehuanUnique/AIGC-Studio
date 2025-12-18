@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getTeams, updateTeam } from '../lib/db.js';
+import { getTeams, updateTeam, deleteTeam } from '../lib/db.js';
 
 export default async function handler(
   req: VercelRequest,
@@ -23,6 +23,13 @@ export default async function handler(
       // 更新团队数据
       const team = req.body;
       await updateTeam(team);
+      return res.status(200).json({ success: true });
+    } else if (req.method === 'DELETE') {
+      const id = (req.query?.id as string) || (req.body?.id as string);
+      if (!id) {
+        return res.status(400).json({ success: false, message: '缺少 id' });
+      }
+      await deleteTeam(id);
       return res.status(200).json({ success: true });
     } else {
       return res.status(405).json({ success: false, message: '方法不允许' });

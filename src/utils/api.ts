@@ -51,6 +51,13 @@ export const teamsAPI = {
       body: JSON.stringify(team),
     });
   },
+
+  // 删除团队
+  delete: async (id: string) => {
+    await fetchAPI(`/teams?id=${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    });
+  },
 };
 
 // 新闻相关 API

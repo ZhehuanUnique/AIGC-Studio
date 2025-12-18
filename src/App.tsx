@@ -99,6 +99,9 @@ function App() {
   const [editingNews, setEditingNews] = useState<News | null>(null);
   const [showMemberModal, setShowMemberModal] = useState<boolean>(false);
   const [showGroupModal, setShowGroupModal] = useState<boolean>(false);
+  const [showAddTeamModal, setShowAddTeamModal] = useState<boolean>(false);
+  const [newTeamTitle, setNewTeamTitle] = useState<string>('');
+  const [newTeamDirectorName, setNewTeamDirectorName] = useState<string>('');
   const [showReferencesModal, setShowReferencesModal] = useState<boolean>(false);
   const [showNewsModal, setShowNewsModal] = useState<boolean>(false);
   const [showConsumptionModal, setShowConsumptionModal] = useState<boolean>(false);
@@ -723,10 +726,99 @@ function App() {
     setShowGroupModal(false);
   };
 
+  const handleDeleteGroup = useCallback(async (groupId: string, groupTitle?: string) => {
+    const ok = await customConfirm(`确认删除该组？\n\n${groupTitle || groupId}\n\n此操作不可撤销。`);
+    if (!ok) return;
+
+    // 先本地删
+    setTeams(prev => prev.filter(t => t.id !== groupId));
+    setUnlockedGroups(prev => {
+      const next = new Set(prev);
+      next.delete(groupId);
+      return next;
+    });
+
+    // 再同步到 API
+    if (!useLocalStorage) {
+      try {
+        await teamsAPI.delete(groupId);
+      } catch (err) {
+        console.error('删除组保存失败:', err);
+        customAlert('删除已在本地完成，但同步到服务器失败，请检查网络连接');
+      }
+    }
+  }, [useLocalStorage, customConfirm, customAlert]);
+
   const openEditReferencesModal = useCallback((group: Team) => {
     setEditingReferencesGroup(group);
     setShowReferencesModal(true);
   }, []);
+
+  const openAddTeamModal = useCallback(() => {
+    setNewTeamTitle('');
+    setNewTeamDirectorName('');
+    setShowAddTeamModal(true);
+  }, []);
+
+  const handleCreateTeam = useCallback(async () => {
+    const title = newTeamTitle.trim();
+    const directorName = newTeamDirectorName.trim();
+    if (!title) {
+      customAlert('请填写组名');
+      return;
+    }
+    if (!directorName) {
+      customAlert('请填写组长名');
+      return;
+    }
+
+    const now = Date.now();
+    const teamId = `t_${now}`;
+    const memberId = `m_${now}`;
+
+    const newTeam: Team = {
+      id: teamId,
+      title,
+      iconKey: 'default',
+      task: '',
+      cycle: '',
+      workload: '',
+      budget: 0,
+      actualCost: 0,
+      progress: 0,
+      status: 'normal',
+      notes: '',
+      coverImage: '',
+      images: [],
+      links: [],
+      todos: [],
+      members: [
+        {
+          id: memberId,
+          name: directorName,
+          isDirector: true,
+          avatar: '',
+          role: '组长',
+        },
+      ],
+      consumptionRecords: [],
+    };
+
+    // 先本地插入
+    setTeams(prev => [...prev, newTeam]);
+
+    // 再同步到 API（后端按 id upsert）
+    if (!useLocalStorage) {
+      try {
+        await teamsAPI.update(newTeam);
+      } catch (err) {
+        console.error('新增组保存失败:', err);
+        customAlert('新增组已在本地创建，但保存到服务器失败，请检查网络连接');
+      }
+    }
+
+    setShowAddTeamModal(false);
+  }, [newTeamTitle, newTeamDirectorName, useLocalStorage, customAlert]);
 
   const handleSaveReferences = useCallback(async () => {
     if (!editingReferencesGroup) return;
@@ -1368,6 +1460,7 @@ function App() {
                 setEditingGroup(group);
                 setShowGroupModal(true);
               }}
+              onDeleteGroup={handleDeleteGroup}
               onEditReferences={openEditReferencesModal}
               onAddConsumption={openAddConsumptionModal}
               onDeleteConsumption={handleDeleteConsumptionRecord}
@@ -1375,6 +1468,20 @@ function App() {
             />
           ))}
         </div>
+
+        {/* 页面底部：新增组入口（仅管理员解锁可见） */}
+        {isAdminUnlocked && (
+          <div className="flex justify-center pt-6 pb-10">
+            <button
+              type="button"
+              onClick={openAddTeamModal}
+              className="w-14 h-14 rounded-2xl bg-slate-900 border border-slate-700 shadow-xl hover:border-slate-600 hover:bg-slate-800 text-slate-200 flex items-center justify-center transition-all"
+              title="新增组"
+            >
+              <Plus size={22} />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* AI 工具：页面最右侧向左展开的悬浮面板（桌面 hover 展开；移动端完全不显示） */}
@@ -1702,6 +1809,36 @@ function App() {
             </div>
           </>
         )}
+      </Modal>
+
+      {/* 新增组：仅需组名 + 组长名 */}
+      <Modal isOpen={showAddTeamModal} onClose={() => setShowAddTeamModal(false)} title="新增组">
+        <InputField
+          label="组名"
+          value={newTeamTitle}
+          onChange={(e) => setNewTeamTitle(e.target.value)}
+        />
+        <InputField
+          label="组长名"
+          value={newTeamDirectorName}
+          onChange={(e) => setNewTeamDirectorName(e.target.value)}
+        />
+        <div className="flex justify-end gap-3 pt-4 border-t border-slate-700/50">
+          <button
+            type="button"
+            onClick={() => setShowAddTeamModal(false)}
+            className="px-5 py-2.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-bold text-sm transition-colors"
+          >
+            取消
+          </button>
+          <button
+            type="button"
+            onClick={handleCreateTeam}
+            className="px-6 py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-lg font-bold text-sm shadow-lg transition-colors"
+          >
+            创建
+          </button>
+        </div>
       </Modal>
 
       {/* 添加账号支出记录模态框 */}

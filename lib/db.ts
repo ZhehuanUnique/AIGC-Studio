@@ -105,6 +105,19 @@ export async function updateTeam(team: any) {
   }
 }
 
+// 删除团队（同时级联删除 members / todos）
+export async function deleteTeam(teamId: string) {
+  try {
+    await sql`DELETE FROM members WHERE team_id = ${teamId}`;
+    await sql`DELETE FROM todos WHERE team_id = ${teamId}`;
+    await sql`DELETE FROM teams WHERE id = ${teamId}`;
+    return { success: true };
+  } catch (error) {
+    console.error('删除团队失败:', error);
+    throw error;
+  }
+}
+
 // 获取所有新闻
 export async function getNews() {
   try {
