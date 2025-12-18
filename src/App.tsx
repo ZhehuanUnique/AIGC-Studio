@@ -12,7 +12,6 @@ import {
 } from './constants';
 import { Modal } from './components/Modal';
 import { InputField } from './components/InputField';
-import { ResourceLink } from './components/ResourceLink';
 import { NewsCard } from './components/NewsCard';
 import { DepartmentSection } from './components/DepartmentSection';
 import { teamsAPI, newsAPI, announcementAPI } from './utils/api';
@@ -64,8 +63,7 @@ function App() {
   const [consumptionPlatform, setConsumptionPlatform] = useState<'jimeng' | 'hailuo' | 'vidu'>('jimeng');
   const [consumptionPackage, setConsumptionPackage] = useState<'jimeng-299' | 'jimeng-499' | 'hailuo-1399' | 'vidu-499'>('jimeng-299');
   const [consumptionNote, setConsumptionNote] = useState<string>('');
-  const [newLinkName, setNewLinkName] = useState<string>('');
-  const [newLinkUrl, setNewLinkUrl] = useState<string>('');
+  // 资源链接模块已从“部门管理”弹窗移除，相关 state 先移除
   const [newTaskText, setNewTaskText] = useState<string>('');
   const announcementTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -545,16 +543,7 @@ function App() {
     }
   }, [useLocalStorage, customConfirm]);
   
-  const handleAddLink = () => {
-    if (!newLinkName || !newLinkUrl) return;
-    setEditingGroup(prev => prev ? ({ ...prev, links: [...(prev.links || []), { name: newLinkName, url: newLinkUrl }] }) : null);
-    setNewLinkName('');
-    setNewLinkUrl('');
-  };
-  
-  const handleRemoveLink = (idx: number) => {
-    setEditingGroup(prev => prev ? ({ ...prev, links: prev.links.filter((_, i) => i !== idx) }) : null);
-  };
+  // 资源链接模块已从“部门管理”弹窗移除，如需恢复可再加回
   
   const handleSaveGroup = async () => {
     if (!editingGroup) return;
@@ -815,6 +804,58 @@ function App() {
       todos: prev.todos.filter(t => t.id !== taskId)
     }) : null);
   }, []);
+
+  // 任务：卡片 hover 浮窗直接操作（打勾/新增/删除），并同步到云端
+  const handleToggleTodoDirect = useCallback(async (groupId: string, todoId: string) => {
+    let updatedTeamToPersist: Team | null = null;
+    setTeams(prev => prev.map(t => {
+      if (t.id !== groupId) return t;
+      const updatedTeam = {
+        ...t,
+        todos: (t.todos || []).map(td => td.id === todoId ? { ...td, done: !td.done } : td)
+      };
+      if (!updatedTeamToPersist) updatedTeamToPersist = updatedTeam;
+      return updatedTeam;
+    }));
+
+    if (!useLocalStorage && updatedTeamToPersist) {
+      teamsAPI.update(updatedTeamToPersist).catch(err => console.error('任务更新失败:', err));
+    }
+  }, [useLocalStorage]);
+
+  const handleAddTodoDirect = useCallback(async (groupId: string, text: string) => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    const newTodo = { id: `t-${Date.now()}`, text: trimmed, done: false };
+
+    let updatedTeamToPersist: Team | null = null;
+    setTeams(prev => prev.map(t => {
+      if (t.id !== groupId) return t;
+      const updatedTeam = { ...t, todos: [...(t.todos || []), newTodo] };
+      if (!updatedTeamToPersist) updatedTeamToPersist = updatedTeam;
+      return updatedTeam;
+    }));
+
+    if (!useLocalStorage && updatedTeamToPersist) {
+      teamsAPI.update(updatedTeamToPersist).catch(err => console.error('任务新增失败:', err));
+    }
+  }, [useLocalStorage]);
+
+  const handleDeleteTodoDirect = useCallback(async (groupId: string, todoId: string) => {
+    if (!await customConfirm('删除该任务？\n\n此操作不可撤销。')) return;
+
+    let updatedTeamToPersist: Team | null = null;
+    setTeams(prev => prev.map(t => {
+      if (t.id !== groupId) return t;
+      const updatedTeam = { ...t, todos: (t.todos || []).filter(td => td.id !== todoId) };
+      if (!updatedTeamToPersist) updatedTeamToPersist = updatedTeam;
+      return updatedTeam;
+    }));
+
+    if (!useLocalStorage && updatedTeamToPersist) {
+      teamsAPI.update(updatedTeamToPersist).catch(err => console.error('任务删除失败:', err));
+    }
+  }, [useLocalStorage, customConfirm]);
 
   // 使用 useMemo 缓存计算密集型的值，避免每次渲染都重新计算
   const totalMembers = useMemo(() => 
@@ -1136,6 +1177,9 @@ function App() {
               onEditMember={openEditMemberModal}
               onAddMember={openAddMemberModal}
               onDeleteMember={handleDeleteMemberDirect}
+              onToggleTodo={handleToggleTodoDirect}
+              onAddTodo={handleAddTodoDirect}
+              onDeleteTodo={handleDeleteTodoDirect}
               onEditGroup={(group) => {
                 setEditingGroup(group);
                 setShowGroupModal(true);
@@ -1332,21 +1376,11 @@ function App() {
                 onChange={(e) => setEditingGroup({ ...editingGroup, actualCost: Number(e.target.value) || 0 })}
               />
             </div>
-            <div className="grid grid-cols-3 gap-4">
-              <InputField
-                label="核心任务"
-                value={editingGroup.task || ''}
-                onChange={(e) => setEditingGroup({ ...editingGroup, task: e.target.value })}
-              />
+            <div className="grid grid-cols-1 gap-4">
               <InputField
                 label="周期"
                 value={editingGroup.cycle || ''}
                 onChange={(e) => setEditingGroup({ ...editingGroup, cycle: e.target.value })}
-              />
-              <InputField
-                label="日工作量"
-                value={editingGroup.workload || ''}
-                onChange={(e) => setEditingGroup({ ...editingGroup, workload: e.target.value })}
               />
             </div>
 
@@ -1427,140 +1461,11 @@ function App() {
                 className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-sky-500"
               />
             </div>
-            <div className="mb-4">
-              <label className="block text-xs font-bold text-slate-400 uppercase mb-2">主参考图</label>
-              <div className="flex items-center gap-4 bg-slate-950 p-3 rounded-lg border border-slate-800">
-                <div className="w-16 h-16 bg-slate-900 rounded overflow-hidden flex items-center justify-center">
-                  {editingGroup.coverImage ? (
-                    <img src={editingGroup.coverImage} className="w-full h-full object-cover" alt="Cover" />
-                  ) : (
-                    <ImageIcon className="text-slate-600" size={24} />
-                  )}
-                </div>
-                <div className="flex-1">
-                  <input
-                    type="file"
-                    ref={groupImgRef}
-                    className="hidden"
-                    accept="image/*"
-                    onChange={(e) => handleGroupImgChange(e, setEditingGroup)}
-                  />
-                  <button
-                    onClick={triggerGroupImgUpload}
-                    className="text-xs bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 px-3 py-2 rounded flex items-center gap-2"
-                  >
-                    <Upload size={12} /> 上传
-                  </button>
-                </div>
-              </div>
-            </div>
-            <div className="mb-4">
-              <label className="block text-xs font-bold text-slate-400 uppercase mb-2">辅助参考图库</label>
-              <div className="bg-slate-950 p-3 rounded-lg border border-slate-800">
-                <div className="grid grid-cols-4 gap-2 mb-3">
-                  {editingGroup.images?.map((img, idx) => (
-                    <div key={idx} className="aspect-square rounded overflow-hidden relative group border border-slate-700 bg-slate-900">
-                      <img src={img} className="w-full h-full object-cover" alt={`Gallery ${idx}`} />
-                      <button
-                        onClick={() => handleRemoveGalleryImage(idx, setEditingGroup)}
-                        className="absolute top-0 right-0 bg-red-500/80 text-white p-0.5 rounded-bl opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <X size={12} />
-                      </button>
-                    </div>
-                  ))}
-                  <button
-                    onClick={triggerGalleryUpload}
-                    className="aspect-square rounded border border-dashed border-slate-700 bg-slate-900/50 flex items-center justify-center text-slate-500 hover:text-sky-500 transition-all"
-                  >
-                    <Plus size={16} />
-                  </button>
-                </div>
-                <input
-                  type="file"
-                  ref={galleryInputRef}
-                  className="hidden"
-                  accept="image/*"
-                  multiple
-                  onChange={(e) => handleGalleryImgChange(e, setEditingGroup)}
-                />
-              </div>
-            </div>
-            <div className="mb-6">
-              <div className="flex items-center justify-between mb-2">
-                <label className="block text-xs font-bold text-slate-400 uppercase">消耗即梦账号数</label>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const tier = prompt('请选择套餐档位:\n输入 299 或 499');
-                    if (tier === '299' || tier === '499') {
-                      const remark = prompt('是否添加备注？（可选，直接点取消跳过）');
-                      const today = new Date().toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' });
-                      const remarkText = remark ? ` - ${remark}` : '';
-                      const newRecord = `+1 [${tier}档] ${today}${remarkText}`;
-                      const currentNotes = editingGroup.notes || '';
-                      const updatedNotes = currentNotes ? `${currentNotes}\n${newRecord}` : newRecord;
-                      const costToAdd = parseInt(tier);
-                      setEditingGroup({ 
-                        ...editingGroup, 
-                        notes: updatedNotes,
-                        actualCost: (editingGroup.actualCost || 0) + costToAdd
-                      });
-                    } else if (tier !== null) {
-                      alert('请输入 299 或 499');
-                    }
-                  }}
-                  className="flex items-center gap-1 bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
-                >
-                  <Plus size={14} /> 添加消费记录
-                </button>
-              </div>
-              <textarea
-                className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-sm text-slate-200 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 resize-none transition-all"
-                rows={4}
-                value={editingGroup.notes || ''}
-                onChange={(e) => setEditingGroup({ ...editingGroup, notes: e.target.value })}
-                placeholder="即梦账号消费记录会显示在这里..."
-              />
-            </div>
-            <div className="mb-6">
-              <label className="block text-xs font-bold text-slate-400 uppercase mb-2">资源链接</label>
-              <div className="bg-slate-950 rounded-lg p-3 border border-slate-800">
-                <div className="flex flex-wrap gap-2 mb-3">
-                  {editingGroup.links?.map((link, idx) => (
-                    <ResourceLink
-                      key={idx}
-                      name={link.name}
-                      url={link.url}
-                      isEditing={true}
-                      onDelete={() => handleRemoveLink(idx)}
-                    />
-                  ))}
-                </div>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    placeholder="名称"
-                    className="flex-1 bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-slate-200 outline-none"
-                    value={newLinkName}
-                    onChange={(e) => setNewLinkName(e.target.value)}
-                  />
-                  <input
-                    type="text"
-                    placeholder="URL"
-                    className="flex-[2] bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-slate-200 outline-none"
-                    value={newLinkUrl}
-                    onChange={(e) => setNewLinkUrl(e.target.value)}
-                  />
-                  <button
-                    onClick={handleAddLink}
-                    className="bg-sky-600 hover:bg-sky-500 text-white px-3 rounded text-xs font-bold"
-                  >
-                    添加
-                  </button>
-                </div>
-              </div>
-            </div>
+            {/* 已按需求移除：核心任务、日工作量、主参考图、辅助参考图库、消耗即梦账号数、资源链接
+                说明：
+                - 参考图请在卡片“参考图设置”里调整
+                - 账号支出请在卡片“账号支出”里调整
+            */}
             <div className="flex justify-end pt-4 border-t border-slate-700/50">
               <button
                 onClick={handleSaveGroup}
