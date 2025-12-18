@@ -34,7 +34,7 @@ function App() {
   const [theme, setTheme] = useState<'dark' | 'blue' | 'white' | 'green'>('dark');
   const [isCoarsePointer, setIsCoarsePointer] = useState<boolean>(false);
   const [aiToolsExpanded, setAiToolsExpanded] = useState<boolean>(false);
-  // 飞书链接放在 guide.html 页面里；这里仅提供站内“使用指南”入口
+  // 使用指南直接跳转飞书文档（不再使用站内 guide.html）
   
   // 自定义提示框状态
   const [alertMessage, setAlertMessage] = useState<string>('');
@@ -1178,9 +1178,11 @@ function App() {
             </div>
             <div className="hidden md:block text-sm font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400 tracking-widest uppercase">剧变时代</div>
             <a
-              href="/guide.html"
+              href="https://e60nf37yjb.feishu.cn/wiki/V5h7w4RhjiwyqtkyE7bc1MsznKc"
+              target="_blank"
+              rel="noreferrer"
               className="hidden md:inline-flex items-center gap-2 bg-slate-900 rounded-lg px-3 py-2 border border-slate-800 hover:border-slate-700 hover:bg-slate-800 transition-all text-[10px] font-bold text-slate-200"
-              title="打开使用指南"
+              title="打开飞书使用指南"
             >
               <ListTodo size={12} className="text-sky-500" />
               使用指南
