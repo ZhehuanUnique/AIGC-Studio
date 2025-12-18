@@ -1,20 +1,19 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   Search, Plus, Trash2, X, Image as ImageIcon, Save, RefreshCw, Upload,
-  CheckCircle, CheckSquare, Globe, ListTodo, Square,
+  CheckCircle, CheckSquare, ListTodo, Square,
   Download, FileJson, ClipboardList, Unlock,
   Wrench, Megaphone
 } from 'lucide-react';
-import { Team, News, Member, NewsType, Todo } from './types';
+import { Team, Member, Todo } from './types';
 import { 
-  STORAGE_KEY, INITIAL_ANNOUNCEMENT, INITIAL_NEWS, INITIAL_TEAMS,
-  STATUS_CONFIG, NEWS_TAGS, AI_TOOLS, PROJECT_PHASES
+  STORAGE_KEY, INITIAL_ANNOUNCEMENT, INITIAL_TEAMS,
+  STATUS_CONFIG, AI_TOOLS, PROJECT_PHASES
 } from './constants';
 import { Modal } from './components/Modal';
 import { InputField } from './components/InputField';
-import { NewsCard } from './components/NewsCard';
 import { DepartmentSection } from './components/DepartmentSection';
-import { teamsAPI, newsAPI, announcementAPI } from './utils/api';
+import { teamsAPI, announcementAPI } from './utils/api';
 import { upload } from '@vercel/blob/client';
 
 interface EditingMember extends Member {
@@ -24,13 +23,11 @@ interface EditingMember extends Member {
 function App() {
   const [teams, setTeams] = useState<Team[]>(INITIAL_TEAMS);
   const [memberTasksByTeam, setMemberTasksByTeam] = useState<Record<string, Record<string, Todo[]>>>({});
-  const [news, setNews] = useState<News[]>(INITIAL_NEWS);
   const [announcement, setAnnouncement] = useState<string>(INITIAL_ANNOUNCEMENT);
   const [isAdminUnlocked, setIsAdminUnlocked] = useState<boolean>(false);
   const [unlockedGroups, setUnlockedGroups] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [currentPhase, setCurrentPhase] = useState<number>(1);
-  const [newsFilter, setNewsFilter] = useState<NewsType>('all');
   const [mounted, setMounted] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [useLocalStorage, setUseLocalStorage] = useState<boolean>(false);
@@ -97,14 +94,12 @@ function App() {
   const [editingMember, setEditingMember] = useState<EditingMember | null>(null);
   const [editingGroup, setEditingGroup] = useState<Team | null>(null);
   const [editingReferencesGroup, setEditingReferencesGroup] = useState<Team | null>(null);
-  const [editingNews, setEditingNews] = useState<News | null>(null);
   const [showMemberModal, setShowMemberModal] = useState<boolean>(false);
   const [showGroupModal, setShowGroupModal] = useState<boolean>(false);
   const [showAddTeamModal, setShowAddTeamModal] = useState<boolean>(false);
   const [newTeamTitle, setNewTeamTitle] = useState<string>('');
   const [newTeamDirectorName, setNewTeamDirectorName] = useState<string>('');
   const [showReferencesModal, setShowReferencesModal] = useState<boolean>(false);
-  const [showNewsModal, setShowNewsModal] = useState<boolean>(false);
   const [showConsumptionModal, setShowConsumptionModal] = useState<boolean>(false);
   const [currentGroupId, setCurrentGroupId] = useState<string>('');
   const [consumptionPlatform, setConsumptionPlatform] = useState<'jimeng' | 'hailuo' | 'vidu'>('jimeng');
@@ -248,9 +243,8 @@ function App() {
     try {
       setLoading(true);
       // 尝试从 API 加载数据
-      const [teamsData, newsData, announcementData] = await Promise.all([
+      const [teamsData, announcementData] = await Promise.all([
         teamsAPI.getAll(),
-        newsAPI.getAll(),
         announcementAPI.get(),
       ]);
       
@@ -266,7 +260,6 @@ function App() {
       });
       
       setTeams(teamsWithPasswords);
-      setNews(newsData);
       setAnnouncement(announcementData);
       setUseLocalStorage(false);
       console.log('✅ 数据已从云端数据库加载');
@@ -290,7 +283,6 @@ function App() {
             });
             setTeams(teamsWithPasswords);
           }
-          if (parsed.news) setNews(parsed.news);
           if (parsed.announcement) setAnnouncement(parsed.announcement);
         } catch (e) {
           console.error('localStorage 解析失败:', e);
@@ -310,7 +302,7 @@ function App() {
         try {
           // 使用 requestIdleCallback 在浏览器空闲时执行,如果不支持则直接执行
           const saveToStorage = () => {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify({ teams, news, announcement }));
+            localStorage.setItem(STORAGE_KEY, JSON.stringify({ teams, announcement }));
           };
           
           if ('requestIdleCallback' in window) {
@@ -325,7 +317,7 @@ function App() {
       
       return () => clearTimeout(timeoutId);
     }
-  }, [teams, news, announcement, mounted, loading]);
+  }, [teams, announcement, mounted, loading]);
 
   // 公告更新时自动保存到 API（防抖）
   useEffect(() => {
@@ -414,14 +406,12 @@ function App() {
   const handleSavePage = async () => {
     try {
       // 保存到 localStorage
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ teams, news, announcement }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ teams, announcement }));
       
       // 如果不是使用本地存储模式,则保存到 API
       if (!useLocalStorage) {
         // 保存所有团队数据
         await Promise.all(teams.map(team => teamsAPI.update(team)));
-        // 保存新闻数据
-        await Promise.all(news.map(item => newsAPI.update(item)));
         // 保存公告
         await announcementAPI.update(announcement);
         
@@ -437,7 +427,7 @@ function App() {
     } catch (error) {
       console.error('保存失败:', error);
       // 至少保存到 localStorage
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ teams, news, announcement }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ teams, announcement }));
       customAlert('⚠️ 云端保存失败,但已保存到本地存储。');
       
       // 即使保存失败也恢复锁定状态
@@ -456,7 +446,6 @@ function App() {
       try {
         const data = JSON.parse(event.target?.result as string);
         if (data.teams) setTeams(data.teams);
-        if (data.news) setNews(data.news);
         if (data.announcement) setAnnouncement(data.announcement);
         customAlert('数据恢复成功！');
       } catch (err) {
@@ -571,7 +560,6 @@ function App() {
     customConfirm('重置数据？\n\n此操作会清空本地缓存并刷新页面，且不可撤销。').then((ok) => {
       if (!ok) return;
       setTeams(INITIAL_TEAMS);
-      setNews(INITIAL_NEWS);
       setAnnouncement(INITIAL_ANNOUNCEMENT);
       localStorage.removeItem(STORAGE_KEY);
       window.location.reload();
@@ -921,62 +909,8 @@ function App() {
     setShowReferencesModal(false);
   }, [editingReferencesGroup, teams, useLocalStorage, migrateTeamMediaToBlob, customAlert]);
   
-  const openAddNewsModal = () => {
-    setEditingNews({ id: '', title: '', date: '11-25', type: 'industry', priority: 'normal', url: '#' });
-    setShowNewsModal(true);
-  };
-  
-  const openEditNewsModal = (item: News) => {
-    setEditingNews({ ...item });
-    setShowNewsModal(true);
-  };
-  
-  const handleSaveNews = async () => {
-    if (!editingNews?.title) return;
-    const isNew = !editingNews.id;
-    const newsToSave = isNew ? { ...editingNews, id: `n-${Date.now()}` } : editingNews;
-    
-    setNews(prev => {
-      const n = isNew
-        ? [newsToSave, ...prev]
-        : prev.map(item => item.id === newsToSave.id ? newsToSave : item);
-      return n;
-    });
-    
-    // 保存到 API
-    if (!useLocalStorage) {
-      try {
-        if (isNew) {
-          await newsAPI.add(newsToSave);
-        } else {
-          await newsAPI.update(newsToSave);
-        }
-        console.log('✅ 新闻已保存');
-      } catch (err) {
-        console.error('保存失败:', err);
-        alert('保存失败，请检查网络连接');
-      }
-    }
-    setShowNewsModal(false);
-  };
-  
-  const handleDeleteNews = useCallback(async (id: string) => {
-    if (await customConfirm('删除该条资讯？\n\n此操作不可撤销。')) {
-      setNews(prev => prev.filter(n => n.id !== id));
-      // 从 API 删除
-      if (!useLocalStorage) {
-        try {
-          await newsAPI.delete(id);
-          console.log('✅ 新闻已删除');
-        } catch (err) {
-          console.error('删除失败:', err);
-        }
-      }
-    }
-  }, [useLocalStorage, customConfirm]);
-  
   const handleExportData = useCallback(() => {
-    const data = { version: '11.0', timestamp: new Date().toISOString(), teams, news, announcement };
+    const data = { version: '11.0', timestamp: new Date().toISOString(), teams, announcement };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -986,7 +920,7 @@ function App() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-  }, [teams, news, announcement]);
+  }, [teams, announcement]);
   
   const handleAddTask = () => {
     if (!newTaskText.trim()) return;
@@ -1208,11 +1142,6 @@ function App() {
     [teams, searchTerm]
   );
   
-  const filteredNews = useMemo(() => 
-    newsFilter === 'all' ? news : news.filter(n => n.type === newsFilter),
-    [news, newsFilter]
-  );
-
   // 加载中界面
   if (loading) {
     return (
@@ -1418,62 +1347,20 @@ function App() {
           </div>
         </header>
 
-        <div className="mb-12">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
-            <div className="flex items-center gap-2 text-sm font-bold text-slate-200 uppercase tracking-wider">
-              <Globe size={18} className="text-sky-500" /> 每日动态漫资讯
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <a
-                href="/juchacha.html"
-                className="flex items-center gap-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white px-3 py-1.5 rounded-lg font-bold text-xs transition-all shadow-lg shadow-emerald-900/20 mr-2"
-              >
-                <Search size={12} />剧查查榜单
-              </a>
-              <div className="flex bg-slate-900 p-1 rounded-lg border border-slate-800">
-                <button
-                  onClick={() => setNewsFilter('all')}
-                  className={`px-3 py-1 text-[10px] font-bold rounded transition-all ${
-                    newsFilter === 'all' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'
-                  }`}
-                >
-                  全部
-                </button>
-                {Object.entries(NEWS_TAGS)
-                  .filter(([key]) => key !== 'all')
-                  .map(([key, config]) => (
-                    <button
-                      key={key}
-                      onClick={() => setNewsFilter(key as NewsType)}
-                      className={`px-3 py-1 text-[10px] font-bold rounded transition-all ${
-                        newsFilter === key ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'
-                      }`}
-                    >
-                      {config.label}
-                    </button>
-                  ))}
-              </div>
-              {isAdminUnlocked && (
-                <button
-                  onClick={openAddNewsModal}
-                  className="ml-2 text-xs flex items-center gap-1 bg-orange-600 hover:bg-orange-500 text-white px-3 py-1.5 rounded font-bold transition-colors"
-                >
-                  <Plus size={12} /> 发布快讯
-                </button>
-              )}
-            </div>
-          </div>
-          <div className="flex gap-4 overflow-x-auto pb-6 custom-scrollbar snap-x">
-            {filteredNews.map(item => (
-              <NewsCard
-                key={item.id}
-                item={item}
-                isEditing={isAdminUnlocked}
-                onClick={openEditNewsModal}
-                onDelete={handleDeleteNews}
-              />
-            ))}
-          </div>
+        {/* 快捷入口 */}
+        <div className="mb-10 flex flex-wrap items-center gap-3">
+          <a
+            href="/juchacha.html"
+            className="flex items-center gap-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white px-3 py-2 rounded-lg font-bold text-xs transition-all shadow-lg shadow-emerald-900/20"
+          >
+            <Search size={12} /> 剧查查榜单
+          </a>
+          <a
+            href="/works.html"
+            className="flex items-center gap-1 bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 text-slate-200 px-3 py-2 rounded-lg font-bold text-xs transition-all"
+          >
+            <Square size={12} /> 作品展示
+          </a>
         </div>
 
         <div className="mb-10 flex justify-center">
@@ -1597,80 +1484,6 @@ function App() {
           </div>
         </div>
       )}
-
-      <Modal isOpen={showNewsModal} onClose={() => setShowNewsModal(false)} title="资讯编辑">
-        <div className="mb-4">
-          <label className="block text-xs font-bold text-slate-400 uppercase mb-2">资讯类型</label>
-          <div className="flex flex-wrap gap-2">
-            {Object.entries(NEWS_TAGS)
-              .filter(([key]) => key !== 'all')
-              .map(([key, config]) => (
-                <button
-                  key={key}
-                  onClick={() => setEditingNews(prev => prev ? ({ ...prev, type: key as NewsType }) : null)}
-                  className={`px-3 py-1.5 rounded text-xs font-bold border ${
-                    editingNews?.type === key
-                      ? 'bg-slate-700 border-slate-500 text-white'
-                      : 'bg-slate-900 border-slate-700 text-slate-500'
-                  }`}
-                >
-                  {config.label}
-                </button>
-              ))}
-          </div>
-        </div>
-        <div className="mb-4">
-          <label className="block text-xs font-bold text-slate-400 uppercase mb-2">优先级</label>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setEditingNews(prev => prev ? ({ ...prev, priority: 'normal' }) : null)}
-              className={`flex-1 py-2 rounded border text-xs font-bold ${
-                editingNews?.priority !== 'high'
-                  ? 'bg-slate-700 border-slate-600 text-white'
-                  : 'bg-slate-900 border-slate-700 text-slate-500'
-              }`}
-            >
-              普通
-            </button>
-            <button
-              onClick={() => setEditingNews(prev => prev ? ({ ...prev, priority: 'high' }) : null)}
-              className={`flex-1 py-2 rounded border text-xs font-bold ${
-                editingNews?.priority === 'high'
-                  ? 'bg-red-900/50 text-red-400'
-                  : 'bg-slate-900 text-slate-500'
-              }`}
-            >
-              高优
-            </button>
-          </div>
-        </div>
-        <InputField
-          label="标题"
-          type="textarea"
-          value={editingNews?.title || ''}
-          onChange={(e) => setEditingNews(prev => prev ? ({ ...prev, title: e.target.value }) : null)}
-        />
-        <div className="grid grid-cols-2 gap-4">
-          <InputField
-            label="日期"
-            value={editingNews?.date || ''}
-            onChange={(e) => setEditingNews(prev => prev ? ({ ...prev, date: e.target.value }) : null)}
-          />
-          <InputField
-            label="链接"
-            value={editingNews?.url || ''}
-            onChange={(e) => setEditingNews(prev => prev ? ({ ...prev, url: e.target.value }) : null)}
-          />
-        </div>
-        <div className="flex justify-end pt-4 border-t border-slate-700">
-          <button
-            onClick={handleSaveNews}
-            className="px-6 py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-lg font-bold text-sm"
-          >
-            发布
-          </button>
-        </div>
-      </Modal>
 
       <Modal isOpen={showMemberModal} onClose={() => setShowMemberModal(false)} title="成员编辑">
         {editingMember && (

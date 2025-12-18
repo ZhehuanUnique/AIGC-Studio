@@ -9,6 +9,7 @@ export default defineConfig({
       input: {
         main: resolve(__dirname, 'index.html'),
         juchacha: resolve(__dirname, 'juchacha.html'),
+        works: resolve(__dirname, 'works.html'),
       },
     },
   },
