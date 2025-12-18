@@ -89,7 +89,7 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
     todosCloseTimerRef.current = setTimeout(() => {
       setShowTodosPopover(false);
       todosCloseTimerRef.current = null;
-    }, 350);
+    }, 800);
   };
   
   const isOverBudget = Number(team.actualCost) > Number(team.budget);
@@ -246,7 +246,8 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
       {/* Pending Tasks：hover 展开浮窗显示全部任务；浮窗离开即消失（对外只展示“小组任务/总目标”） */}
       {groupTodos && (
         <div
-          className="mb-6 px-1 relative"
+          // 触发范围尽量小：仅包住标题 + 预览卡片，不占满整行，避免误触
+          className="mb-6 px-1 relative inline-block w-fit"
           onMouseEnter={openTodosPopover}
           onMouseLeave={scheduleCloseTodosPopover}
         >
@@ -254,7 +255,7 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
             <ListTodo size={12} /> Pending Tasks ({groupPendingTodos.length})
             <span className="text-[10px] text-slate-600 font-mono">(hover)</span>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2 w-fit">
             {groupTodos.slice(0, 3).map(todo => (
               <div
                 key={todo.id}
@@ -630,13 +631,15 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
             </div>
           </div>
         </div>
-        {/* 参考图：固定 16:9 */}
-        <div className="lg:col-span-4 flex flex-col h-full">
-          <div className="bg-[#1e293b]/30 rounded-xl p-4 border border-slate-800 h-full flex flex-col">
-            <div className="text-[10px] text-slate-500 uppercase font-bold tracking-widest mb-3 flex items-center gap-2">
-              <ImageIcon size={12} /> Style Ref / 参考图
-            </div>
-            <div className="rounded-lg bg-slate-950 border border-slate-800 overflow-hidden relative group aspect-[16/9]">
+        {/* 封面图 + 账号支出：手机端左右并排，方便快速预览；桌面端保持在右侧区域 */}
+        <div className="lg:col-span-7 grid grid-cols-2 gap-4">
+          {/* 封面图：固定 9:16 */}
+          <div className="flex flex-col h-full">
+            <div className="bg-[#1e293b]/30 rounded-xl p-4 border border-slate-800 h-full flex flex-col">
+              <div className="text-[10px] text-slate-500 uppercase font-bold tracking-widest mb-3 flex items-center gap-2">
+                <ImageIcon size={12} /> 封面图
+              </div>
+              <div className="rounded-lg bg-slate-950 border border-slate-800 overflow-hidden relative group aspect-[9/16]">
               {team.coverImage ? (
                 <>
                   <img
@@ -677,8 +680,8 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
             )}
           </div>
         </div>
-        {/* 账号支出：保持可读性，整体高度与参考图更协调 */}
-        <div className="lg:col-span-3 flex flex-col gap-4">
+          {/* 账号支出：竖向卡片，手机端与封面图左右并排 */}
+          <div className="flex flex-col gap-4">
           <div className="bg-[#1e293b]/30 rounded-xl p-5 border border-slate-800 flex-1 flex flex-col min-h-[220px]">
             <div className="flex items-center justify-between mb-3">
               <div className="text-[11px] text-slate-500 uppercase font-bold tracking-widest flex items-center gap-2">
@@ -745,6 +748,7 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
               )}
             </div>
           </div>
+        </div>
         </div>
       </div>
     </div>
