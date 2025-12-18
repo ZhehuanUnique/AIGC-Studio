@@ -184,7 +184,7 @@ export const WorksApp: React.FC = () => {
 
       <footer className="relative border-t border-slate-800 bg-slate-950/60">
         <div className="max-w-7xl mx-auto px-6 py-10 text-xs text-slate-500">
-          效果参考：你提到的页面风格（动态/浮动/视差）。后续给我作品清单（标题、标签、封面图或视频链接），我就把这里替换成真实内容。
+          测试版
         </div>
       </footer>
     </div>

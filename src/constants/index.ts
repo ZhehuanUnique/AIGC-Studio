@@ -52,7 +52,10 @@ export const INITIAL_TEAMS: Team[] = [
         avatar: '',
         role: '总负责人',
         projects: [
-          { name: '负责项目：Git 提交流程（点击复制）', url: 'git add -A && git commit -m "update" && git pull --rebase && git push' },
+          {
+            name: '负责项目（飞书多维表）',
+            url: 'https://e60nf37yjb.feishu.cn/base/RoHWb8tQVa6zoHs2eOkc63krnyd?table=tblQ2St1cSQYRvH5&view=vewEjkuVBs'
+          },
         ],
       },
       { id: 'm8', name: '何静雨', isDirector: false, avatar: '', role: '执行专员' },

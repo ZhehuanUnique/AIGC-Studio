@@ -32,6 +32,8 @@ interface DepartmentSectionProps {
   onEditReferences?: (group: Team) => void;
   onAddConsumption?: (groupId: string) => void;
   onDeleteConsumption?: (groupId: string, recordId: string) => void;
+  onAddDirectorProject?: (groupId: string, directorId: string) => void;
+  onDeleteDirectorProject?: (groupId: string, directorId: string, projectIndex: number) => void;
   onToggleLock: (team: Team) => void;
 }
 
@@ -56,6 +58,8 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
   onEditReferences,
   onAddConsumption,
   onDeleteConsumption,
+  onAddDirectorProject,
+  onDeleteDirectorProject,
   onToggleLock
 }) => {
   const Icon = ICON_MAP[team.iconKey] || ICON_MAP['default'];
@@ -64,6 +68,15 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
   const groupTodos = team.todos || [];
   const groupPendingTodos = groupTodos.filter(t => !t.done);
   const getMemberTodos = (memberId: string) => memberTasks?.[memberId] || [];
+  const fallbackDirectorProjects = (name: string) => {
+    if (name === '汪凯伦') {
+      return [{
+        name: '负责项目（飞书多维表）',
+        url: 'https://e60nf37yjb.feishu.cn/base/RoHWb8tQVa6zoHs2eOkc63krnyd?table=tblQ2St1cSQYRvH5&view=vewEjkuVBs'
+      }];
+    }
+    return [];
+  };
 
   const [deleteMode, setDeleteMode] = useState<boolean>(false);
   const canDeleteMembers = useMemo(() => isUnlocked && !!onDeleteMember, [isUnlocked, onDeleteMember]);
@@ -478,14 +491,90 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
         {/* 成员区稍微收窄，给参考图更舒服的横向空间 */}
         <div className="lg:col-span-5 flex flex-col gap-6">
           {directors.length > 0 && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {directors.map((director) => (
-                <div key={director.id} className="relative group">
-                  <DirectorCard
-                    member={director}
-                    isEditing={isEditing}
-                    onClick={onEditMember}
-                  />
+            <div className="grid grid-cols-1 gap-4">
+              {/* 总负责人区：每个负责人占一整行（避免在半屏宽度下再分两列导致挤压变形） */}
+              {directors.map((director) => {
+                const storedProjects =
+                  Array.isArray((director as any).projects) ? (director as any).projects : [];
+                const fallbackProjects = fallbackDirectorProjects(director.name);
+                // 合并展示：避免“兜底链接”在新增真实链接后被覆盖消失
+                const projects = [
+                  ...storedProjects,
+                  ...fallbackProjects.filter((fp: any) =>
+                    !storedProjects.some((sp: any) => sp?.name === fp?.name && sp?.url === fp?.url)
+                  ),
+                ];
+
+                return (
+                  <div key={director.id} className="relative group">
+                    {/* 左：总负责人卡片；右：负责项目面板（并排） */}
+                    <div className="flex flex-col md:flex-row gap-3">
+                      <div className="md:flex-1 min-w-0">
+                        <DirectorCard
+                          member={director}
+                          isEditing={isEditing}
+                          onClick={onEditMember}
+                        />
+                      </div>
+
+                      <div className="md:w-[260px] shrink-0 rounded-xl bg-slate-900/30 border border-slate-800 p-3 self-stretch">
+                        {/* 右侧面板：两列（内容 + 操作列），保证 “+” 与每行垃圾桶同列对齐 */}
+                        <div className="grid grid-cols-[1fr_auto] items-center gap-2 mb-2 pr-1">
+                          <div className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">负责项目</div>
+                          <div className="w-8 flex justify-end">
+                            {isUnlocked && !!onAddDirectorProject && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onAddDirectorProject(team.id, director.id);
+                                }}
+                                className="w-8 h-8 inline-flex items-center justify-center rounded bg-sky-600/20 text-sky-300 border border-sky-500/30 hover:bg-sky-600/30 hover:text-sky-200 transition-colors"
+                                title="新增负责项目"
+                              >
+                                <Plus size={14} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {projects.length > 0 ? (
+                          <div className="space-y-2 max-h-[220px] overflow-y-auto custom-scrollbar pr-1">
+                            {projects.map((p: any, idx: number) => (
+                              <div key={`${p?.name || 'p'}-${idx}`} className="grid grid-cols-[1fr_auto] items-start gap-2">
+                                <a
+                                  href={p?.url || '#'}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="flex-1 min-w-0 text-xs text-sky-300 hover:text-sky-200 underline underline-offset-2 decoration-sky-500/40 hover:decoration-sky-400/70 transition-colors break-all"
+                                  title={p?.url || ''}
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  {p?.name || '未命名链接'}
+                                </a>
+                                <div className="w-8 flex justify-end">
+                                  {isUnlocked && !!onDeleteDirectorProject && (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        onDeleteDirectorProject(team.id, director.id, idx);
+                                      }}
+                                      className="w-8 h-8 inline-flex items-center justify-center rounded bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 hover:text-red-300 transition-colors"
+                                      title="删除"
+                                    >
+                                      <Trash2 size={14} />
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-[10px] text-slate-600">暂无</div>
+                        )}
+                      </div>
+                    </div>
                   {/* Hover 任务浮窗：成员任务 */}
                   <div className="absolute left-0 top-[calc(100%+8px)] z-50 w-[320px] max-w-[80vw] opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity">
                     <div className="bg-slate-950/95 backdrop-blur-xl border border-slate-800 rounded-xl shadow-2xl overflow-hidden">
@@ -533,7 +622,8 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
                     </button>
                   )}
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
           <div className="bg-[#1e293b]/20 rounded-xl p-4 border border-slate-800">

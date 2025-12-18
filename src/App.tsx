@@ -5,7 +5,7 @@ import {
   Download, FileJson, ClipboardList, Unlock,
   Wrench, Megaphone
 } from 'lucide-react';
-import { Team, Member, Todo } from './types';
+import { Team, Member, Todo, ResourceLink } from './types';
 import { 
   STORAGE_KEY, INITIAL_ANNOUNCEMENT, INITIAL_TEAMS,
   STATUS_CONFIG, AI_TOOLS, PROJECT_PHASES
@@ -108,8 +108,6 @@ function App() {
   const [consumptionNote, setConsumptionNote] = useState<string>('');
   // 资源链接模块已从“部门管理”弹窗移除，相关 state 先移除
   const [newTaskText, setNewTaskText] = useState<string>('');
-  const [newProjectName, setNewProjectName] = useState<string>('');
-  const [newProjectUrl, setNewProjectUrl] = useState<string>('');
   const announcementTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // 主题配置
@@ -167,6 +165,54 @@ function App() {
       setConfirmCallback(() => resolve);
     });
   }, []);
+
+  const addDirectorProject = useCallback(async (groupId: string, directorId: string) => {
+    const name = (await customPrompt('请输入项目名称：'))?.trim();
+    if (!name) return;
+    const url = (await customPrompt('请输入飞书链接：'))?.trim();
+    if (!url) return;
+
+    let teamToPersist: Team | null = null;
+    setTeams(prev => prev.map(t => {
+      if (t.id !== groupId) return t;
+      const nextMembers = t.members.map(m => {
+        if (m.id !== directorId) return m;
+        const list: ResourceLink[] = Array.isArray((m as any).projects) ? [...((m as any).projects)] : [];
+        list.push({ name, url });
+        return { ...m, projects: list } as Member;
+      });
+      const updated = { ...t, members: nextMembers };
+      teamToPersist = updated;
+      return updated;
+    }));
+
+    if (!useLocalStorage && teamToPersist) {
+      teamsAPI.update(teamToPersist).catch(err => console.error('保存失败:', err));
+    }
+  }, [customPrompt, useLocalStorage]);
+
+  const deleteDirectorProject = useCallback(async (groupId: string, directorId: string, projectIndex: number) => {
+    const ok = await customConfirm('删除该负责项目链接？\n\n此操作不可撤销。');
+    if (!ok) return;
+
+    let teamToPersist: Team | null = null;
+    setTeams(prev => prev.map(t => {
+      if (t.id !== groupId) return t;
+      const nextMembers = t.members.map(m => {
+        if (m.id !== directorId) return m;
+        const list: ResourceLink[] = Array.isArray((m as any).projects) ? [...((m as any).projects)] : [];
+        list.splice(projectIndex, 1);
+        return { ...m, projects: list } as Member;
+      });
+      const updated = { ...t, members: nextMembers };
+      teamToPersist = updated;
+      return updated;
+    }));
+
+    if (!useLocalStorage && teamToPersist) {
+      teamsAPI.update(teamToPersist).catch(err => console.error('保存失败:', err));
+    }
+  }, [customConfirm, useLocalStorage]);
 
   const isDataUrl = (value?: string) => typeof value === 'string' && value.startsWith('data:');
   const isVercelBlobUrl = (value?: string) =>
@@ -571,16 +617,12 @@ function App() {
   
   const openAddMemberModal = (gid: string) => {
     setEditingMember({ id: '', name: '', isDirector: false, avatar: '', role: '执行专员', currentGroupId: gid });
-    setNewProjectName('');
-    setNewProjectUrl('');
     setShowMemberModal(true);
   };
   
   const openEditMemberModal = (m: Member) => {
     const g = teams.find(t => t.members.some(mem => mem.id === m.id));
     setEditingMember({ ...m, currentGroupId: g?.id });
-    setNewProjectName('');
-    setNewProjectUrl('');
     setShowMemberModal(true);
   };
   
@@ -1405,6 +1447,8 @@ function App() {
               onEditReferences={openEditReferencesModal}
               onAddConsumption={openAddConsumptionModal}
               onDeleteConsumption={handleDeleteConsumptionRecord}
+              onAddDirectorProject={addDirectorProject}
+              onDeleteDirectorProject={deleteDirectorProject}
               onToggleLock={toggleGroupLock}
             />
           ))}
@@ -1536,77 +1580,6 @@ function App() {
                 {editingMember.isDirector ? '是' : '否'}
               </button>
             </div>
-
-            {/* 总负责人：负责项目（链接/命令） */}
-            {editingMember.isDirector && (
-              <div className="mb-4 p-4 bg-slate-950 rounded-xl border border-slate-800">
-                <label className="block text-xs font-bold text-slate-400 uppercase mb-3">负责项目</label>
-
-                {Array.isArray((editingMember as any).projects) && (editingMember as any).projects.length > 0 ? (
-                  <div className="space-y-2 mb-3">
-                    {(editingMember as any).projects.map((p: any, idx: number) => (
-                      <div key={`${p?.name || ''}-${idx}`} className="flex items-center gap-2">
-                        <div className="flex-1 min-w-0">
-                          <div className="text-xs text-slate-200 font-bold truncate">{p?.name || '未命名'}</div>
-                          <div className="text-[10px] text-slate-500 font-mono truncate">{p?.url || ''}</div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const list = Array.isArray((editingMember as any).projects) ? [...(editingMember as any).projects] : [];
-                            list.splice(idx, 1);
-                            setEditingMember({ ...(editingMember as any), projects: list });
-                          }}
-                          className="px-2 py-1 rounded bg-red-500/10 text-red-400 hover:bg-red-500/20 text-xs font-bold"
-                          title="删除该链接"
-                        >
-                          删除
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-[10px] text-slate-600 mb-3">暂无负责项目链接</div>
-                )}
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  <input
-                    value={newProjectName}
-                    onChange={(e) => setNewProjectName(e.target.value)}
-                    className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-sky-500"
-                    placeholder="显示名称（例如：Git 提交流程）"
-                  />
-                  <input
-                    value={newProjectUrl}
-                    onChange={(e) => setNewProjectUrl(e.target.value)}
-                    className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-sky-500 font-mono"
-                    placeholder="网址或命令（例如：git add -A && ...）"
-                  />
-                </div>
-                <div className="mt-2 flex justify-end">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const name = newProjectName.trim();
-                      const url = newProjectUrl.trim();
-                      if (!name || !url) return;
-                      const list = Array.isArray((editingMember as any).projects) ? [...(editingMember as any).projects] : [];
-                      list.push({ name, url });
-                      setEditingMember({ ...(editingMember as any), projects: list });
-                      setNewProjectName('');
-                      setNewProjectUrl('');
-                    }}
-                    className="px-3 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold"
-                    title="添加负责项目链接"
-                  >
-                    添加
-                  </button>
-                </div>
-                <div className="mt-2 text-[10px] text-slate-500 leading-relaxed">
-                  说明：如果填的是网址（http/https），页面会以超链接打开；如果填的是命令/文本，点击会自动复制到剪贴板。
-                </div>
-              </div>
-            )}
 
             <div className="flex gap-3 pt-4 border-t border-slate-700/50">
               {editingMember.id && (
