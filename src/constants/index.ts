@@ -121,12 +121,13 @@ export const NEWS_TAGS: Record<string, NewsTagConfig> = {
 };
 
 export const AI_TOOLS: AITool[] = [
-  { name: 'Midjourney', url: 'https://www.midjourney.com', icon: '🎨' },
-  { name: 'ChatGPT', url: 'https://chat.openai.com', icon: '🧠' },
-  { name: 'Runway', url: 'https://runwayml.com', icon: '🎬' },
-  { name: 'ElevenLabs', url: 'https://elevenlabs.io', icon: '🔊' },
-  { name: 'Stable Diffusion', url: '#', icon: '⚡' },
-  { name: 'Notion', url: 'https://www.notion.so', icon: '📝' },
+  // 占位图标：后续你提供正式 logo（SVG/PNG）后再替换
+  { name: '即梦', url: 'https://jimeng.jianying.com/ai-tool/home/?type=image', icon: '即' },
+  { name: 'Vidu', url: 'https://www.vidu.cn/home/recommend', icon: 'V' },
+  { name: '海螺', url: 'https://hailuoai.com/', icon: '螺' },
+  { name: '巨日禄', url: 'https://hailuoai.com/', icon: '巨' },
+  { name: 'RunningHub', url: 'https://www.runninghub.cn/workspace', icon: 'R' },
+  { name: '哩布哩布', url: 'https://www.liblib.art/ai-tool/image-generator', icon: '哩' },
 ];
 
 export const PROJECT_PHASES = ['筹备期', '制作期', '后期合成', '宣发期'];

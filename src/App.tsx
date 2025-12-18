@@ -3,12 +3,12 @@ import {
   Search, Plus, Trash2, X, Image as ImageIcon, Save, RefreshCw, Upload,
   CheckCircle, CheckSquare, Globe, ListTodo, Square,
   Download, FileJson, ClipboardList, Unlock,
-  Megaphone
+  Wrench, Megaphone
 } from 'lucide-react';
 import { Team, News, Member, NewsType } from './types';
 import { 
   STORAGE_KEY, INITIAL_ANNOUNCEMENT, INITIAL_NEWS, INITIAL_TEAMS,
-  STATUS_CONFIG, NEWS_TAGS, PROJECT_PHASES
+  STATUS_CONFIG, NEWS_TAGS, AI_TOOLS, PROJECT_PHASES
 } from './constants';
 import { Modal } from './components/Modal';
 import { InputField } from './components/InputField';
@@ -34,6 +34,8 @@ function App() {
   const [loading, setLoading] = useState<boolean>(true);
   const [useLocalStorage, setUseLocalStorage] = useState<boolean>(false);
   const [theme, setTheme] = useState<'dark' | 'blue' | 'white' | 'green'>('dark');
+  const [isCoarsePointer, setIsCoarsePointer] = useState<boolean>(false);
+  const [aiToolsExpanded, setAiToolsExpanded] = useState<boolean>(false);
   
   // 自定义提示框状态
   const [alertMessage, setAlertMessage] = useState<string>('');
@@ -45,6 +47,26 @@ function App() {
   const [confirmMessage, setConfirmMessage] = useState<string>('');
   const [showConfirm, setShowConfirm] = useState<boolean>(false);
   const [confirmCallback, setConfirmCallback] = useState<((value: boolean) => void) | null>(null);
+
+  useEffect(() => {
+    const mq = window.matchMedia?.('(pointer: coarse)');
+    if (!mq) return;
+
+    const apply = () => setIsCoarsePointer(!!mq.matches);
+    apply();
+
+    // 兼容不同浏览器的事件 API
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const anyMq: any = mq;
+    if (typeof anyMq.addEventListener === 'function') {
+      anyMq.addEventListener('change', apply);
+      return () => anyMq.removeEventListener('change', apply);
+    }
+    if (typeof anyMq.addListener === 'function') {
+      anyMq.addListener(apply);
+      return () => anyMq.removeListener(apply);
+    }
+  }, []);
 
   const normalizeTeam = useCallback((team: any): Team => {
     // 后端/数据库字段是 snake_case，这里统一转换成前端使用的 camelCase
@@ -1354,6 +1376,69 @@ function App() {
           ))}
         </div>
       </div>
+
+      {/* AI 工具：页面最右侧向左展开的悬浮面板（桌面 hover 展开；移动端完全不显示） */}
+      {!isCoarsePointer && (
+        <div
+          className="fixed right-0 top-1/2 -translate-y-1/2 z-40"
+          onMouseEnter={() => setAiToolsExpanded(true)}
+          onMouseLeave={() => setAiToolsExpanded(false)}
+        >
+          <div
+            className={[
+              'relative',
+              'transition-transform duration-200 ease-out',
+              // 收起态：面板整体移出屏幕，只保留左侧“发亮把手”可见
+              aiToolsExpanded ? 'translate-x-0' : 'translate-x-[260px]',
+            ].join(' ')}
+          >
+            {/* 展开后的面板 */}
+            <div className="w-[260px] bg-slate-900/90 border border-slate-700 rounded-l-2xl shadow-2xl backdrop-blur-md p-3">
+              <div className="flex items-center gap-2 px-1 pb-2 mb-2 border-b border-slate-800">
+                <div className="w-8 h-8 rounded-xl bg-slate-800/80 border border-slate-700 grid place-items-center text-slate-200">
+                  <Wrench size={16} />
+                </div>
+                <div className="text-xs font-black tracking-wide text-slate-300">AI TOOLS</div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                {AI_TOOLS.map((tool, idx) => (
+                  <a
+                    key={idx}
+                    href={tool.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="h-11 rounded-xl bg-slate-800 hover:bg-slate-700 border border-transparent hover:border-slate-600 transition-all flex items-center justify-center gap-2"
+                    title={tool.name}
+                  >
+                    <span className="w-7 h-7 rounded-lg bg-slate-900/60 border border-slate-700 grid place-items-center text-slate-100 font-black leading-none">
+                      {tool.icon}
+                    </span>
+                    <span className="text-xs font-bold text-slate-200">{tool.name}</span>
+                  </a>
+                ))}
+              </div>
+            </div>
+
+            {/* 收起态提示把手：微微发亮/呼吸感 */}
+            <div className="absolute top-1/2 -translate-y-1/2 left-0 -translate-x-full">
+              <div
+                className={[
+                  'w-8 h-24 rounded-l-2xl',
+                  'bg-slate-900/70 border border-slate-700 shadow-2xl backdrop-blur-md',
+                  'grid place-items-center',
+                  aiToolsExpanded ? 'opacity-0' : 'opacity-100',
+                  'transition-opacity duration-200',
+                ].join(' ')}
+              >
+                <div className="relative w-1 h-14 rounded-full bg-slate-700 overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-b from-sky-400/0 via-sky-400/60 to-sky-400/0 animate-pulse" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Modal isOpen={showNewsModal} onClose={() => setShowNewsModal(false)} title="资讯编辑">
         <div className="mb-4">
