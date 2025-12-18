@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <title>剧查查榜单 - 子页面</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      body {
+        margin: 0;
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji",
+          "Segoe UI Emoji";
+        background: radial-gradient(1200px 600px at 50% -10%, rgba(56, 189, 248, 0.18), transparent 60%),
+          linear-gradient(180deg, #020617 0%, #0b1220 55%, #020617 100%);
+        color: #e2e8f0;
+      }
+      .wrap {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 24px 18px 60px;
+      }
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 18px;
+      }
+      .title {
+        font-weight: 900;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        font-size: 14px;
+        color: rgba(226, 232, 240, 0.85);
+      }
+      a.btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: 1px solid rgba(148, 163, 184, 0.25);
+        background: rgba(15, 23, 42, 0.7);
+        color: #e2e8f0;
+        text-decoration: none;
+        font-size: 12px;
+        font-weight: 700;
+      }
+      a.btn:hover {
+        border-color: rgba(56, 189, 248, 0.45);
+        background: rgba(2, 132, 199, 0.12);
+      }
+      .card {
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        background: rgba(15, 23, 42, 0.62);
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+      }
+      .hint {
+        padding: 14px 16px;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .hint p {
+        margin: 0;
+        font-size: 12px;
+        color: rgba(148, 163, 184, 0.95);
+      }
+      iframe {
+        width: 100%;
+        height: calc(100vh - 190px);
+        border: 0;
+        background: #fff;
+      }
+      .warn {
+        font-size: 12px;
+        color: rgba(148, 163, 184, 0.9);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="topbar">
+        <div class="title">剧查查榜单 / 子页面</div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <a class="btn" href="/index.html">返回中控台</a>
+          <a
+            class="btn"
+            href="https://weixin.sogou.com/weixin?type=2&query=%E5%89%A7%E6%9F%A5%E6%9F%A5+%E5%8A%A8%E6%80%81%E6%BC%AB%E6%A6%9C%E5%8D%95"
+            target="_blank"
+            rel="noreferrer"
+          >
+            打开原站（新窗口）
+          </a>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="hint">
+          <p>这里是 `index.html` 的一个子页面入口：后续你要做的新操作/新模块，都可以先放在这个页面里。</p>
+          <div class="warn">注：如果外站禁止 iframe，本页仍可作为你的内部工作台页面。</div>
+        </div>
+        <iframe
+          title="剧查查 - 外站内容"
+          src="https://weixin.sogou.com/weixin?type=2&query=%E5%89%A7%E6%9F%A5%E6%9F%A5+%E5%8A%A8%E6%80%81%E6%BC%AB%E6%A6%9C%E5%8D%95"
+        ></iframe>
+      </div>
+    </div>
+  </body>
+</html>
+
+
+

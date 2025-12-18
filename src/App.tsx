@@ -42,6 +42,9 @@ function App() {
   const [showPrompt, setShowPrompt] = useState<boolean>(false);
   const [promptValue, setPromptValue] = useState<string>('');
   const [promptCallback, setPromptCallback] = useState<((value: string | null) => void) | null>(null);
+  const [confirmMessage, setConfirmMessage] = useState<string>('');
+  const [showConfirm, setShowConfirm] = useState<boolean>(false);
+  const [confirmCallback, setConfirmCallback] = useState<((value: boolean) => void) | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const groupImgRef = useRef<HTMLInputElement>(null);
@@ -50,9 +53,11 @@ function App() {
 
   const [editingMember, setEditingMember] = useState<EditingMember | null>(null);
   const [editingGroup, setEditingGroup] = useState<Team | null>(null);
+  const [editingReferencesGroup, setEditingReferencesGroup] = useState<Team | null>(null);
   const [editingNews, setEditingNews] = useState<News | null>(null);
   const [showMemberModal, setShowMemberModal] = useState<boolean>(false);
   const [showGroupModal, setShowGroupModal] = useState<boolean>(false);
+  const [showReferencesModal, setShowReferencesModal] = useState<boolean>(false);
   const [showNewsModal, setShowNewsModal] = useState<boolean>(false);
   const [showConsumptionModal, setShowConsumptionModal] = useState<boolean>(false);
   const [currentGroupId, setCurrentGroupId] = useState<string>('');
@@ -81,11 +86,12 @@ function App() {
       gradient: 'from-blue-950 via-blue-900 to-blue-950'
     },
     white: { 
-      bg: 'bg-gray-50', 
-      card: 'bg-white', 
-      text: 'text-gray-800', 
-      border: 'border-gray-300',
-      gradient: 'from-gray-100 via-gray-50 to-gray-100'
+      // “白色”切换为淡蓝色主题（更清爽、且依旧是浅色模式）
+      bg: 'bg-sky-50',
+      card: 'bg-white/80 backdrop-blur',
+      text: 'text-slate-800',
+      border: 'border-sky-200/70',
+      gradient: 'from-sky-50 via-white to-blue-50'
     },
     green: { 
       bg: 'bg-emerald-950', 
@@ -108,6 +114,14 @@ function App() {
       setPromptValue('');
       setShowPrompt(true);
       setPromptCallback(() => resolve);
+    });
+  }, []);
+
+  const customConfirm = useCallback((message: string): Promise<boolean> => {
+    return new Promise((resolve) => {
+      setConfirmMessage(message);
+      setShowConfirm(true);
+      setConfirmCallback(() => resolve);
     });
   }, []);
 
@@ -342,7 +356,6 @@ function App() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, targetSetter: React.Dispatch<React.SetStateAction<EditingMember | null>>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 800 * 1024) return alert('图片需小于 800KB');
     const reader = new FileReader();
     reader.onloadend = () => {
       targetSetter(prev => prev ? ({ ...prev, avatar: reader.result as string }) : null);
@@ -350,49 +363,55 @@ function App() {
     reader.readAsDataURL(file);
   };
   
-  const handleGroupImgChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleGroupImgChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    targetSetter: React.Dispatch<React.SetStateAction<Team | null>>
+  ) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 1024 * 1024) return alert('图片需小于 1MB');
     const reader = new FileReader();
     reader.onloadend = () => {
-      setEditingGroup(prev => prev ? ({ ...prev, coverImage: reader.result as string }) : null);
+      targetSetter(prev => prev ? ({ ...prev, coverImage: reader.result as string }) : null);
     };
     reader.readAsDataURL(file);
   };
   
-  const handleGalleryImgChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleGalleryImgChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    targetSetter: React.Dispatch<React.SetStateAction<Team | null>>
+  ) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
     files.forEach(file => {
-      if (file.size > 500 * 1024) {
-        alert(`图片 ${file.name} 过大`);
-        return;
-      }
       const reader = new FileReader();
       reader.onloadend = () => {
-        setEditingGroup(prev => prev ? ({ ...prev, images: [...(prev.images || []), reader.result as string] }) : null);
+        targetSetter(prev => prev ? ({ ...prev, images: [...(prev.images || []), reader.result as string] }) : null);
       };
       reader.readAsDataURL(file);
     });
   };
   
-  const handleRemoveGalleryImage = useCallback((idx: number) => {
-    setEditingGroup(prev => prev ? ({ ...prev, images: prev.images.filter((_, i) => i !== idx) }) : null);
-  }, []);
+  const handleRemoveGalleryImage = useCallback(
+    (idx: number, targetSetter: React.Dispatch<React.SetStateAction<Team | null>>) => {
+      targetSetter(prev => prev ? ({ ...prev, images: (prev.images || []).filter((_, i) => i !== idx) }) : null);
+    },
+    []
+  );
   
   const triggerFileUpload = useCallback(() => fileInputRef.current?.click(), []);
   const triggerGroupImgUpload = useCallback(() => groupImgRef.current?.click(), []);
   const triggerGalleryUpload = useCallback(() => galleryInputRef.current?.click(), []);
   
   const handleReset = () => {
-    if (window.confirm('重置数据？')) {
+    // 保持与密码弹窗同一套风格
+    customConfirm('重置数据？\n\n此操作会清空本地缓存并刷新页面，且不可撤销。').then((ok) => {
+      if (!ok) return;
       setTeams(INITIAL_TEAMS);
       setNews(INITIAL_NEWS);
       setAnnouncement(INITIAL_ANNOUNCEMENT);
       localStorage.removeItem(STORAGE_KEY);
       window.location.reload();
-    }
+    });
   };
   
   const openAddMemberModal = (gid: string) => {
@@ -408,35 +427,49 @@ function App() {
   
   const handleSaveMember = async () => {
     if (!editingMember?.name.trim()) return alert('请输入姓名');
+    const memberId = editingMember.id || `m-${Date.now()}`;
+    const targetGroupId = editingMember.currentGroupId;
+
+    const mToSave: Member = {
+      id: memberId,
+      name: editingMember.name,
+      isDirector: editingMember.isDirector,
+      avatar: editingMember.avatar,
+      role: editingMember.role || (editingMember.isDirector ? '总负责人' : '执行专员')
+    };
+
+    // ⚠️ 这里必须用“不可变更新”，否则在 React 严格模式(dev)下可能导致一次点击被执行两次从而 push 出双份数据
+    let teamToPersist: Team | null = null;
     setTeams(prev => {
-      const newTeams = [...prev];
-      if (editingMember.id) {
-        newTeams.forEach(t => {
-          t.members = t.members.filter(m => m.id !== editingMember.id);
-        });
-      }
-      const mToSave: Member = {
-        id: editingMember.id || `m-${Date.now()}`,
-        name: editingMember.name,
-        isDirector: editingMember.isDirector,
-        avatar: editingMember.avatar,
-        role: editingMember.role || (editingMember.isDirector ? '总负责人' : '执行专员')
-      };
-      const tIdx = newTeams.findIndex(t => t.id === editingMember.currentGroupId);
-      if (tIdx !== -1) {
-        newTeams[tIdx].members.push(mToSave);
-        // 保存到 API
-        if (!useLocalStorage) {
-          teamsAPI.update(newTeams[tIdx]).catch(err => console.error('保存失败:', err));
-        }
-      }
-      return newTeams;
+      // 先从所有组移除该成员（编辑成员/换组时用）
+      const removed = prev.map(t => ({
+        ...t,
+        members: t.members.filter(m => m.id !== memberId)
+      }));
+
+      // 再把成员加入目标组
+      const next = removed.map(t => {
+        if (t.id !== targetGroupId) return t;
+        const updatedTeam = {
+          ...t,
+          members: [...t.members, mToSave]
+        };
+        teamToPersist = updatedTeam;
+        return updatedTeam;
+      });
+
+      return next;
     });
+
+    // 保存到 API（放在 setTeams 外，避免在 state 更新回调里做副作用）
+    if (!useLocalStorage && teamToPersist) {
+      teamsAPI.update(teamToPersist).catch(err => console.error('保存失败:', err));
+    }
     setShowMemberModal(false);
   };
   
   const handleDeleteMember = async () => {
-    if (window.confirm('删除成员？')) {
+    if (await customConfirm('删除成员？\n\n此操作不可撤销。')) {
       setTeams(prev => {
         const newTeams = prev.map(t => ({ ...t, members: t.members.filter(m => m.id !== editingMember?.id) }));
         // 保存到 API
@@ -451,6 +484,66 @@ function App() {
       setShowMemberModal(false);
     }
   };
+
+  // 从卡片上直接删除成员（无需打开成员编辑弹窗）
+  const handleDeleteMemberDirect = useCallback(async (
+    memberId: string,
+    memberName?: string,
+    memberRole?: string,
+    isDirector?: boolean
+  ) => {
+    if (!await customConfirm('确认删除该成员？\n\n此操作不可撤销。')) return;
+
+    // 先在本地 state 里删
+    let updatedTeamToPersist: Team | null = null;
+    setTeams(prev => {
+      const next = prev.map(t => {
+        const hasById = !!memberId && t.members.some(m => m.id === memberId);
+        const hasByFallback = !memberId && !!memberName && t.members.some(m =>
+          (m.name === memberName) &&
+          (memberRole ? m.role === memberRole : true) &&
+          (typeof isDirector === 'boolean' ? m.isDirector === isDirector : true)
+        );
+
+        if (!hasById && !hasByFallback) return t;
+
+        let newMembers = t.members;
+        if (hasById) {
+          newMembers = t.members.filter(m => m.id !== memberId);
+        } else {
+          // 兜底：老数据可能没有 id/重复 id，用“姓名+角色+是否组长”删除第一个匹配项
+          let removedOnce = false;
+          newMembers = t.members.filter(m => {
+            if (removedOnce) return true;
+            const match =
+              (m.name === memberName) &&
+              (memberRole ? m.role === memberRole : true) &&
+              (typeof isDirector === 'boolean' ? m.isDirector === isDirector : true);
+            if (match) {
+              removedOnce = true;
+              return false;
+            }
+            return true;
+          });
+        }
+
+        const updatedTeam = { ...t, members: newMembers };
+        // 严格模式下 updater 可能执行两次：保留第一次捕获到的 team，避免第二次找不到成员导致丢失
+        if (!updatedTeamToPersist) updatedTeamToPersist = updatedTeam;
+        return updatedTeam;
+      });
+      return next;
+    });
+
+    // 再同步到 API
+    if (!useLocalStorage && updatedTeamToPersist) {
+      try {
+        await teamsAPI.update(updatedTeamToPersist);
+      } catch (err) {
+        console.error('删除成员保存失败:', err);
+      }
+    }
+  }, [useLocalStorage, customConfirm]);
   
   const handleAddLink = () => {
     if (!newLinkName || !newLinkUrl) return;
@@ -478,6 +571,43 @@ function App() {
     }
     setShowGroupModal(false);
   };
+
+  const openEditReferencesModal = useCallback((group: Team) => {
+    setEditingReferencesGroup(group);
+    setShowReferencesModal(true);
+  }, []);
+
+  const handleSaveReferences = useCallback(async () => {
+    if (!editingReferencesGroup) return;
+
+    setTeams(prev => prev.map(t => t.id === editingReferencesGroup.id ? {
+      ...t,
+      coverImage: editingReferencesGroup.coverImage,
+      images: editingReferencesGroup.images
+    } : t));
+
+    // 保存到 API
+    if (!useLocalStorage) {
+      try {
+        const existing = teams.find(t => t.id === editingReferencesGroup.id);
+        if (existing) {
+          await teamsAPI.update({
+            ...existing,
+            coverImage: editingReferencesGroup.coverImage,
+            images: editingReferencesGroup.images
+          });
+        } else {
+          await teamsAPI.update(editingReferencesGroup);
+        }
+        console.log('✅ 参考图已保存');
+      } catch (err) {
+        console.error('参考图保存失败:', err);
+        alert('保存失败，请检查网络连接');
+      }
+    }
+
+    setShowReferencesModal(false);
+  }, [editingReferencesGroup, teams, useLocalStorage]);
   
   const openAddNewsModal = () => {
     setEditingNews({ id: '', title: '', date: '11-25', type: 'industry', priority: 'normal', url: '#' });
@@ -519,7 +649,7 @@ function App() {
   };
   
   const handleDeleteNews = useCallback(async (id: string) => {
-    if (window.confirm('删除？')) {
+    if (await customConfirm('删除该条资讯？\n\n此操作不可撤销。')) {
       setNews(prev => prev.filter(n => n.id !== id));
       // 从 API 删除
       if (!useLocalStorage) {
@@ -531,7 +661,7 @@ function App() {
         }
       }
     }
-  }, [useLocalStorage]);
+  }, [useLocalStorage, customConfirm]);
   
   const handleExportData = useCallback(() => {
     const data = { version: '11.0', timestamp: new Date().toISOString(), teams, news, announcement };
@@ -736,7 +866,7 @@ function App() {
     <div className={`min-h-screen ${themes[theme].bg} ${themes[theme].text} font-sans selection:bg-orange-500/20 selection:text-orange-300 pb-32 transition-all duration-500 ${mounted ? 'opacity-100' : 'opacity-0'}`}>
       <div className="fixed inset-0 pointer-events-none z-0">
         <div className={`absolute inset-0 bg-gradient-to-b ${themes[theme].gradient} transition-all duration-500`}></div>
-        <div className={`absolute top-[-10%] left-1/2 -translate-x-1/2 w-[1200px] h-[600px] ${theme === 'white' ? 'bg-blue-200/30' : 'bg-blue-950/20'} rounded-[100%] blur-[120px] animate-pulse opacity-30 transition-all duration-500`}></div>
+        <div className={`absolute top-[-10%] left-1/2 -translate-x-1/2 w-[1200px] h-[600px] ${theme === 'white' ? 'bg-sky-200/35' : 'bg-blue-950/20'} rounded-[100%] blur-[120px] animate-pulse opacity-30 transition-all duration-500`}></div>
         <div className={`absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:60px_60px] ${theme === 'white' ? 'opacity-20' : 'opacity-10'} transition-opacity duration-500`}></div>
       </div>
       
@@ -779,12 +909,12 @@ function App() {
                   className={`w-6 h-6 rounded transition-all ${
                     theme === t ? 'ring-2 ring-sky-500 scale-110' : 'opacity-50 hover:opacity-100'
                   }`}
-                  title={t === 'dark' ? '黑色' : t === 'blue' ? '淡蓝色' : t === 'white' ? '白色' : '绿色'}
+                  title={t === 'dark' ? '黑色' : t === 'blue' ? '深蓝色' : t === 'white' ? '淡蓝色' : '绿色'}
                   style={{
                     backgroundColor: 
                       t === 'dark' ? '#0f172a' : 
                       t === 'blue' ? '#1e3a8a' : 
-                      t === 'white' ? '#f9fafb' : 
+                      t === 'white' ? '#e0f2fe' : 
                       '#064e3b',
                     border: t === 'white' ? '1px solid #d1d5db' : 'none'
                   }}
@@ -931,9 +1061,7 @@ function App() {
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <a
-                href="https://weixin.sogou.com/weixin?type=2&query=%E5%89%A7%E6%9F%A5%E6%9F%A5+%E5%8A%A8%E6%80%81%E6%BC%AB%E6%A6%9C%E5%8D%95"
-                target="_blank"
-                rel="noreferrer"
+                href="/juchacha.html"
                 className="flex items-center gap-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white px-3 py-1.5 rounded-lg font-bold text-xs transition-all shadow-lg shadow-emerald-900/20 mr-2"
               >
                 <Search size={12} />剧查查榜单
@@ -1007,10 +1135,12 @@ function App() {
               theme={theme}
               onEditMember={openEditMemberModal}
               onAddMember={openAddMemberModal}
+              onDeleteMember={handleDeleteMemberDirect}
               onEditGroup={(group) => {
                 setEditingGroup(group);
                 setShowGroupModal(true);
               }}
+              onEditReferences={openEditReferencesModal}
               onAddConsumption={openAddConsumptionModal}
               onDeleteConsumption={handleDeleteConsumptionRecord}
               onToggleLock={toggleGroupLock}
@@ -1313,7 +1443,7 @@ function App() {
                     ref={groupImgRef}
                     className="hidden"
                     accept="image/*"
-                    onChange={handleGroupImgChange}
+                    onChange={(e) => handleGroupImgChange(e, setEditingGroup)}
                   />
                   <button
                     onClick={triggerGroupImgUpload}
@@ -1332,7 +1462,7 @@ function App() {
                     <div key={idx} className="aspect-square rounded overflow-hidden relative group border border-slate-700 bg-slate-900">
                       <img src={img} className="w-full h-full object-cover" alt={`Gallery ${idx}`} />
                       <button
-                        onClick={() => handleRemoveGalleryImage(idx)}
+                        onClick={() => handleRemoveGalleryImage(idx, setEditingGroup)}
                         className="absolute top-0 right-0 bg-red-500/80 text-white p-0.5 rounded-bl opacity-0 group-hover:opacity-100 transition-opacity"
                       >
                         <X size={12} />
@@ -1352,7 +1482,7 @@ function App() {
                   className="hidden"
                   accept="image/*"
                   multiple
-                  onChange={handleGalleryImgChange}
+                  onChange={(e) => handleGalleryImgChange(e, setEditingGroup)}
                 />
               </div>
             </div>
@@ -1578,6 +1708,87 @@ function App() {
         </div>
       </Modal>
 
+      {/* 参考图独立编辑（无需输入组密码） */}
+      <Modal
+        isOpen={showReferencesModal}
+        onClose={() => setShowReferencesModal(false)}
+        title="参考图设置"
+      >
+        {editingReferencesGroup && (
+          <>
+            <div className="mb-4">
+              <label className="block text-xs font-bold text-slate-400 uppercase mb-2">主参考图</label>
+              <div className="flex items-center gap-4 bg-slate-950 p-3 rounded-lg border border-slate-800">
+                <div className="w-16 h-16 bg-slate-900 rounded overflow-hidden flex items-center justify-center">
+                  {editingReferencesGroup.coverImage ? (
+                    <img src={editingReferencesGroup.coverImage} className="w-full h-full object-cover" alt="Cover" />
+                  ) : (
+                    <ImageIcon className="text-slate-600" size={24} />
+                  )}
+                </div>
+                <div className="flex-1">
+                  <input
+                    type="file"
+                    ref={groupImgRef}
+                    className="hidden"
+                    accept="image/*"
+                    onChange={(e) => handleGroupImgChange(e, setEditingReferencesGroup)}
+                  />
+                  <button
+                    onClick={triggerGroupImgUpload}
+                    className="text-xs bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 px-3 py-2 rounded flex items-center gap-2"
+                  >
+                    <Upload size={12} /> 上传
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-xs font-bold text-slate-400 uppercase mb-2">辅助参考图库</label>
+              <div className="bg-slate-950 p-3 rounded-lg border border-slate-800">
+                <div className="grid grid-cols-4 gap-2 mb-3">
+                  {editingReferencesGroup.images?.map((img, idx) => (
+                    <div key={idx} className="aspect-square rounded overflow-hidden relative group border border-slate-700 bg-slate-900">
+                      <img src={img} className="w-full h-full object-cover" alt={`Gallery ${idx}`} />
+                      <button
+                        onClick={() => handleRemoveGalleryImage(idx, setEditingReferencesGroup)}
+                        className="absolute top-0 right-0 bg-red-500/80 text-white p-0.5 rounded-bl opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    onClick={triggerGalleryUpload}
+                    className="aspect-square rounded border border-dashed border-slate-700 bg-slate-900/50 flex items-center justify-center text-slate-500 hover:text-sky-500 transition-all"
+                  >
+                    <Plus size={16} />
+                  </button>
+                </div>
+                <input
+                  type="file"
+                  ref={galleryInputRef}
+                  className="hidden"
+                  accept="image/*"
+                  multiple
+                  onChange={(e) => handleGalleryImgChange(e, setEditingReferencesGroup)}
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-4 border-t border-slate-700/50">
+              <button
+                onClick={handleSaveReferences}
+                className="px-6 py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-lg font-bold text-sm shadow-lg"
+              >
+                保存参考图
+              </button>
+            </div>
+          </>
+        )}
+      </Modal>
+
       {/* 自定义Alert对话框 - 居中显示 */}
       {showAlert && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
@@ -1634,6 +1845,37 @@ function App() {
                 className="flex-1 bg-sky-600 hover:bg-sky-500 text-white px-4 py-3 rounded-lg font-bold transition-colors shadow-lg"
               >
                 确定
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 自定义Confirm对话框 - 与 Prompt 同风格 */}
+      {showConfirm && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className={`${themes[theme].card} ${themes[theme].border} border-2 rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl animate-in zoom-in-95 duration-200`}>
+            <div className={`${themes[theme].text} text-center mb-6 whitespace-pre-wrap`}>
+              {confirmMessage}
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  confirmCallback?.(false);
+                  setShowConfirm(false);
+                }}
+                className="flex-1 bg-slate-700 hover:bg-slate-600 text-white px-4 py-3 rounded-lg font-bold transition-colors"
+              >
+                取消
+              </button>
+              <button
+                onClick={() => {
+                  confirmCallback?.(true);
+                  setShowConfirm(false);
+                }}
+                className="flex-1 bg-red-600 hover:bg-red-500 text-white px-4 py-3 rounded-lg font-bold transition-colors shadow-lg"
+              >
+                删除
               </button>
             </div>
           </div>

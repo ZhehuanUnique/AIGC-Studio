@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { 
   Edit2, Activity, Wallet, TrendingDown, ListTodo, 
   CheckSquare, Square, Users, Plus, Image as ImageIcon, Upload, 
@@ -19,7 +19,9 @@ interface DepartmentSectionProps {
   theme: 'dark' | 'blue' | 'white' | 'green';
   onEditMember: (member: Member) => void;
   onAddMember: (groupId: string) => void;
+  onDeleteMember?: (memberId: string, memberName?: string, memberRole?: string, isDirector?: boolean) => void;
   onEditGroup: (group: Team) => void;
+  onEditReferences?: (group: Team) => void;
   onAddConsumption?: (groupId: string) => void;
   onDeleteConsumption?: (groupId: string, recordId: string) => void;
   onToggleLock: (team: Team) => void;
@@ -33,7 +35,9 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
   theme,
   onEditMember,
   onAddMember,
+  onDeleteMember,
   onEditGroup,
+  onEditReferences,
   onAddConsumption,
   onDeleteConsumption,
   onToggleLock
@@ -41,6 +45,10 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
   const Icon = ICON_MAP[team.iconKey] || ICON_MAP['default'];
   const directors = team.members.filter(m => m.isDirector);
   const crew = team.members.filter(m => !m.isDirector);
+
+  const [deleteMode, setDeleteMode] = useState<boolean>(false);
+  const canDeleteMembers = useMemo(() => isUnlocked && !!onDeleteMember, [isUnlocked, onDeleteMember]);
+  const showDeleteUI = canDeleteMembers && deleteMode;
   
   const isOverBudget = Number(team.actualCost) > Number(team.budget);
   const budgetColor = isOverBudget ? 'text-red-500' : 'text-slate-300';
@@ -215,16 +223,31 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        <div className="lg:col-span-6 flex flex-col gap-6">
+        {/* 成员区稍微收窄，给参考图更舒服的横向空间 */}
+        <div className="lg:col-span-5 flex flex-col gap-6">
           {directors.length > 0 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {directors.map((director) => (
-                <DirectorCard
-                  key={director.id}
-                  member={director}
-                  isEditing={isEditing}
-                  onClick={onEditMember}
-                />
+                <div key={director.id} className="relative group">
+                  <DirectorCard
+                    member={director}
+                    isEditing={isEditing}
+                    onClick={onEditMember}
+                  />
+                  {showDeleteUI && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDeleteMember?.(director.id, director.name, director.role, true);
+                      }}
+                      className="absolute top-2 right-2 z-10 text-red-500/80 hover:text-red-400 bg-black/40 hover:bg-red-500/10 border border-red-500/20 rounded-lg p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                      title="删除成员"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
+                </div>
               ))}
             </div>
           )}
@@ -234,23 +257,53 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
                 <Users size={12} /> Execution Team
               </div>
               {isUnlocked && (
-                <button
-                  onClick={() => onAddMember(team.id)}
-                  className="flex items-center gap-1 text-[10px] text-sky-500 hover:text-sky-400 font-bold bg-sky-500/10 px-2 py-1 rounded hover:bg-sky-500/20 transition-colors"
-                >
-                  <Plus size={10} /> ADD
-                </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => onAddMember(team.id)}
+                      className="flex items-center gap-1 text-[10px] text-sky-500 hover:text-sky-400 font-bold bg-sky-500/10 px-2 py-1 rounded hover:bg-sky-500/20 transition-colors"
+                    >
+                      <Plus size={10} /> ADD
+                    </button>
+                    {canDeleteMembers && (
+                      <button
+                        type="button"
+                        onClick={() => setDeleteMode(v => !v)}
+                        className={`flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded transition-colors ${
+                          deleteMode
+                            ? 'bg-red-600 text-white'
+                            : 'bg-red-500/10 text-red-400 hover:bg-red-500/20'
+                        }`}
+                        title={deleteMode ? '退出删除模式' : '删除成员'}
+                      >
+                        <Trash2 size={10} /> DEL
+                      </button>
+                    )}
+                  </div>
               )}
             </div>
             <div className="grid grid-cols-2 gap-3">
               {crew.length > 0 ? (
                 crew.map((member) => (
-                  <MemberCard
-                    key={member.id}
-                    member={member}
-                    isEditing={isEditing}
-                    onClick={onEditMember}
-                  />
+                    <div key={member.id} className="relative group">
+                      <MemberCard
+                        member={member}
+                        isEditing={isEditing}
+                        onClick={onEditMember}
+                      />
+                      {showDeleteUI && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDeleteMember?.(member.id, member.name, member.role, false);
+                          }}
+                          className="absolute top-2 right-2 z-10 text-red-500/80 hover:text-red-400 bg-black/40 hover:bg-red-500/10 border border-red-500/20 rounded-lg p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                          title="删除成员"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                    </div>
                 ))
               ) : (
                 <div className="col-span-full py-4 text-center text-xs text-slate-600 border border-dashed border-slate-800 rounded-lg">
@@ -260,12 +313,13 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
             </div>
           </div>
         </div>
-        <div className="lg:col-span-3 flex flex-col h-full">
+        {/* 参考图：固定 16:9 */}
+        <div className="lg:col-span-4 flex flex-col h-full">
           <div className="bg-[#1e293b]/30 rounded-xl p-4 border border-slate-800 h-full flex flex-col">
             <div className="text-[10px] text-slate-500 uppercase font-bold tracking-widest mb-3 flex items-center gap-2">
               <ImageIcon size={12} /> Style Ref / 参考图
             </div>
-            <div className="flex-1 rounded-lg bg-slate-950 border border-slate-800 overflow-hidden relative group min-h-[160px]">
+            <div className="rounded-lg bg-slate-950 border border-slate-800 overflow-hidden relative group aspect-[16/9]">
               {team.coverImage ? (
                 <>
                   <img
@@ -283,9 +337,9 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
                   <span className="text-[9px] opacity-50">暂无 Key Visual</span>
                 </div>
               )}
-              {isUnlocked && (
+              {onEditReferences && (
                 <button
-                  onClick={() => onEditGroup(team)}
+                  onClick={() => onEditReferences(team)}
                   className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs text-white font-bold gap-1"
                 >
                   <Upload size={12} /> 设置
@@ -306,13 +360,14 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
             )}
           </div>
         </div>
+        {/* 账号支出：保持可读性，整体高度与参考图更协调 */}
         <div className="lg:col-span-3 flex flex-col gap-4">
-          <div className="bg-[#1e293b]/30 rounded-xl p-5 border border-slate-800 flex-1 flex flex-col min-h-[180px]">
+          <div className="bg-[#1e293b]/30 rounded-xl p-5 border border-slate-800 flex-1 flex flex-col min-h-[220px]">
             <div className="flex items-center justify-between mb-3">
               <div className="text-[11px] text-slate-500 uppercase font-bold tracking-widest flex items-center gap-2">
                 <Receipt size={14} /> 账号支出
               </div>
-              {isUnlocked && onAddConsumption && (
+              {onAddConsumption && (
                 <button
                   onClick={() => onAddConsumption(team.id)}
                   className="text-sky-500 hover:text-white transition-colors bg-sky-500/10 hover:bg-sky-500/20 rounded-lg p-1.5"
@@ -355,7 +410,7 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
                             <div className="text-xs text-slate-500 italic">{record.note}</div>
                           )}
                         </div>
-                        {isUnlocked && onDeleteConsumption && (
+                        {onDeleteConsumption && (
                           <button
                             onClick={() => onDeleteConsumption(team.id, record.id)}
                             className="text-red-500/50 hover:text-red-400 hover:bg-red-500/10 rounded p-1 transition-colors"
