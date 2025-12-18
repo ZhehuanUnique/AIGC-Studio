@@ -4,7 +4,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
  * 测试环境变量是否可用
  */
 export default async function handler(
-  req: VercelRequest,
+  _req: VercelRequest,
   res: VercelResponse
 ) {
   const envVars = {
