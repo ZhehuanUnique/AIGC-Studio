@@ -45,6 +45,26 @@ function App() {
   const [confirmMessage, setConfirmMessage] = useState<string>('');
   const [showConfirm, setShowConfirm] = useState<boolean>(false);
   const [confirmCallback, setConfirmCallback] = useState<((value: boolean) => void) | null>(null);
+
+  const normalizeTeam = useCallback((team: any): Team => {
+    // 后端/数据库字段是 snake_case，这里统一转换成前端使用的 camelCase
+    return {
+      ...team,
+      iconKey: team.iconKey ?? team.icon_key ?? 'default',
+      actualCost: team.actualCost ?? team.actual_cost ?? 0,
+      coverImage: team.coverImage ?? team.cover_image ?? '',
+      // 兼容旧字段：members/todos/images/links 若是字符串则尝试解析
+      images: Array.isArray(team.images) ? team.images : (() => {
+        try { return JSON.parse(team.images || '[]'); } catch { return []; }
+      })(),
+      links: Array.isArray(team.links) ? team.links : (() => {
+        try { return JSON.parse(team.links || '[]'); } catch { return []; }
+      })(),
+      members: Array.isArray(team.members) ? team.members : [],
+      todos: Array.isArray(team.todos) ? team.todos : [],
+      consumptionRecords: team.consumptionRecords ?? team.consumption_records ?? team.consumptionRecords ?? []
+    } as Team;
+  }, []);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const groupImgRef = useRef<HTMLInputElement>(null);
@@ -209,7 +229,8 @@ function App() {
       ]);
       
       // 合并密码字段 - 确保每个组都有密码
-      const teamsWithPasswords = teamsData.map((team: Team) => {
+      const teamsWithPasswords = teamsData.map((raw: any) => {
+        const team = normalizeTeam(raw);
         const initialTeam = INITIAL_TEAMS.find(t => t.id === team.id);
         return {
           ...team,
@@ -232,7 +253,8 @@ function App() {
           const parsed = JSON.parse(savedData);
           if (parsed.teams) {
             // 同样合并密码字段
-            const teamsWithPasswords = parsed.teams.map((team: Team) => {
+            const teamsWithPasswords = parsed.teams.map((raw: any) => {
+              const team = normalizeTeam(raw);
               const initialTeam = INITIAL_TEAMS.find(t => t.id === team.id);
               return {
                 ...team,
