@@ -3,12 +3,12 @@ import {
   Search, Plus, Trash2, X, Image as ImageIcon, Save, RefreshCw, Upload,
   CheckCircle, CheckSquare, Globe, ListTodo, Square,
   Download, FileJson, ClipboardList, Unlock,
-  Wrench, Megaphone
+  Megaphone
 } from 'lucide-react';
 import { Team, News, Member, NewsType } from './types';
 import { 
   STORAGE_KEY, INITIAL_ANNOUNCEMENT, INITIAL_NEWS, INITIAL_TEAMS,
-  STATUS_CONFIG, NEWS_TAGS, AI_TOOLS, PROJECT_PHASES
+  STATUS_CONFIG, NEWS_TAGS, PROJECT_PHASES
 } from './constants';
 import { Modal } from './components/Modal';
 import { InputField } from './components/InputField';
@@ -1351,27 +1351,6 @@ function App() {
               onDeleteConsumption={handleDeleteConsumptionRecord}
               onToggleLock={toggleGroupLock}
             />
-          ))}
-        </div>
-      </div>
-
-      <div className="fixed bottom-8 right-8 z-40 flex flex-col gap-3 animate-in slide-in-from-right duration-700">
-        <div className="bg-slate-900/90 border border-slate-700 p-2 rounded-2xl shadow-2xl backdrop-blur-md flex flex-col gap-2">
-          <div className="p-2 text-center border-b border-slate-800 mb-1">
-            <Wrench size={20} className="text-slate-400 mx-auto" />
-            <div className="text-[9px] font-bold text-slate-500 mt-1">AI TOOLS</div>
-          </div>
-          {AI_TOOLS.map((tool, idx) => (
-            <a
-              key={idx}
-              href={tool.url}
-              target="_blank"
-              rel="noreferrer"
-              className="w-10 h-10 flex items-center justify-center bg-slate-800 hover:bg-slate-700 rounded-xl text-lg transition-all hover:scale-110 border border-transparent hover:border-slate-600 relative group"
-              title={tool.name}
-            >
-              {tool.icon}
-            </a>
           ))}
         </div>
       </div>
