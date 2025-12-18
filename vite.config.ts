@@ -10,6 +10,7 @@ export default defineConfig({
         main: resolve(__dirname, 'index.html'),
         juchacha: resolve(__dirname, 'juchacha.html'),
         works: resolve(__dirname, 'works.html'),
+        guide: resolve(__dirname, 'guide.html'),
       },
     },
   },

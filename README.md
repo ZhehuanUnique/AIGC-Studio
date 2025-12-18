@@ -1,6 +1,6 @@
-# AIGC 漫剧制作中台 - React + TypeScript 版本
+# 剧变时代中控台
 
-这是一个使用 React + TypeScript + Vite 构建的 AIGC 漫剧制作中台管理系统。
+这是一个使用 React + TypeScript + Vite 构建的剧变时代中控台管理系统。
 
 ## 技术栈
 

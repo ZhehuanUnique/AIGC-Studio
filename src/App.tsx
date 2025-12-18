@@ -27,13 +27,14 @@ function App() {
   const [isAdminUnlocked, setIsAdminUnlocked] = useState<boolean>(false);
   const [unlockedGroups, setUnlockedGroups] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState<string>('');
-  const [currentPhase, setCurrentPhase] = useState<number>(1);
+  const currentPhase = 1;
   const [mounted, setMounted] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [useLocalStorage, setUseLocalStorage] = useState<boolean>(false);
   const [theme, setTheme] = useState<'dark' | 'blue' | 'white' | 'green'>('dark');
   const [isCoarsePointer, setIsCoarsePointer] = useState<boolean>(false);
   const [aiToolsExpanded, setAiToolsExpanded] = useState<boolean>(false);
+  // 飞书链接放在 guide.html 页面里；这里仅提供站内“使用指南”入口
   
   // 自定义提示框状态
   const [alertMessage, setAlertMessage] = useState<string>('');
@@ -1176,21 +1177,14 @@ function App() {
               <img src="/logo.png" alt="剧变时代" className="w-full h-full object-cover" />
             </div>
             <div className="hidden md:block text-sm font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400 tracking-widest uppercase">剧变时代</div>
-            <div className="hidden md:flex bg-slate-900 rounded-lg p-1 border border-slate-800">
-              {PROJECT_PHASES.map((phase, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => setCurrentPhase(idx)}
-                  className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${
-                    currentPhase === idx
-                      ? 'bg-slate-800 text-white border border-slate-700 shadow-sm'
-                      : 'text-slate-500 hover:text-slate-300'
-                  }`}
-                >
-                  {phase}
-                </button>
-              ))}
-            </div>
+            <a
+              href="/guide.html"
+              className="hidden md:inline-flex items-center gap-2 bg-slate-900 rounded-lg px-3 py-2 border border-slate-800 hover:border-slate-700 hover:bg-slate-800 transition-all text-[10px] font-bold text-slate-200"
+              title="打开使用指南"
+            >
+              <ListTodo size={12} className="text-sky-500" />
+              使用指南
+            </a>
           </div>
           <div className="flex items-center gap-4">
             {/* 主题切换按钮 */}
