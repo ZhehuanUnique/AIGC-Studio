@@ -1169,11 +1169,21 @@ function App() {
       if (!useLocalStorage && updatedTeam) {
         try {
           await teamsAPI.update(updatedTeam);
+          customAlert('✅ 作品上传成功！');
           console.log('✅ 作品已上传');
-        } catch (err) {
+        } catch (err: any) {
           console.error('上传失败:', err);
-          customAlert('⚠️ 作品已在本地保存，但同步到服务器失败，请检查网络连接');
+          const errorMsg = err?.message || '未知错误';
+          // 如果错误提示缺少字段，说明数据库需要迁移
+          if (errorMsg.includes('unfinished_works') || errorMsg.includes('finished_works') || errorMsg.includes('column') || errorMsg.includes('不存在')) {
+            customAlert('⚠️ 数据库需要更新，请联系管理员执行迁移脚本：lib/migration-add-works.sql');
+          } else {
+            customAlert('⚠️ 作品已在本地保存，但同步到服务器失败：' + errorMsg);
+          }
         }
+      } else if (useLocalStorage && updatedTeam) {
+        // 本地存储模式
+        customAlert('✅ 作品已保存（本地模式）');
       }
     } catch (err) {
       console.error('作品上传失败:', err);
@@ -1209,11 +1219,20 @@ function App() {
     if (!useLocalStorage && updatedTeam) {
       try {
         await teamsAPI.update(updatedTeam);
+        customAlert('✅ 作品已删除');
         console.log('✅ 作品已删除');
-      } catch (err) {
+      } catch (err: any) {
         console.error('删除失败:', err);
-        customAlert('⚠️ 作品已在本地删除，但同步到服务器失败，请检查网络连接');
+        const errorMsg = err?.message || '未知错误';
+        if (errorMsg.includes('unfinished_works') || errorMsg.includes('finished_works') || errorMsg.includes('column') || errorMsg.includes('不存在')) {
+          customAlert('⚠️ 数据库需要更新，请联系管理员执行迁移脚本：lib/migration-add-works.sql');
+        } else {
+          customAlert('⚠️ 作品已在本地删除，但同步到服务器失败：' + errorMsg);
+        }
       }
+    } else if (useLocalStorage && updatedTeam) {
+      // 本地存储模式
+      customAlert('✅ 作品已删除（本地模式）');
     }
   }, [useLocalStorage, deleteBlobByUrl, customAlert]);
 
