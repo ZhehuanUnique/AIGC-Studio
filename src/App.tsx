@@ -1216,12 +1216,41 @@ function App() {
             finishedWorks: teamData.finishedWorks || []
           };
           
-          await teamsAPI.update(teamToSave);
-          customAlert('✅ 作品上传成功！');
+          const saveResult = await teamsAPI.update(teamToSave);
           console.log('✅ 作品已上传并保存到数据库', {
             unfinishedCount: teamToSave.unfinishedWorks?.length || 0,
-            finishedCount: teamToSave.finishedWorks?.length || 0
+            finishedCount: teamToSave.finishedWorks?.length || 0,
+            saveResult
           });
+          
+          // 验证：立即从数据库重新加载一次，确认数据已保存
+          try {
+            const verifyData = await teamsAPI.getAll();
+            const verifyTeam = verifyData.find((t: Team) => t.id === teamToSave.id);
+            if (verifyTeam) {
+              const verifyWorks = isFinished 
+                ? (verifyTeam.finishedWorks || [])
+                : (verifyTeam.unfinishedWorks || []);
+              console.log(`🔍 验证保存结果 - 团队 ${teamToSave.id}:`, {
+                expectedCount: works.length,
+                actualCount: verifyWorks.length,
+                match: works.length === verifyWorks.length
+              });
+              
+              if (works.length !== verifyWorks.length) {
+                console.error('❌ 警告：保存的数据与验证结果不匹配！');
+                customAlert('⚠️ 作品上传成功，但验证时发现数据可能未完全保存，请刷新后检查');
+              } else {
+                customAlert('✅ 作品上传成功！');
+              }
+            } else {
+              console.warn('⚠️ 验证时未找到团队数据');
+              customAlert('✅ 作品上传成功！（验证步骤未完成，请手动刷新检查）');
+            }
+          } catch (verifyErr) {
+            console.error('验证保存结果时出错:', verifyErr);
+            customAlert('✅ 作品上传成功！（验证步骤失败，请手动刷新检查）');
+          }
         } catch (err: any) {
           console.error('❌ 上传失败:', err);
           const errorMsg = err?.message || '未知错误';
