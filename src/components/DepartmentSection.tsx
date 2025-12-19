@@ -964,15 +964,17 @@ const WorkCard: React.FC<WorkCardProps> = ({
         </div>
 
         {works.length > 0 ? (
-          <div className="flex-1 grid grid-cols-3 gap-1 overflow-hidden">
-            {works.slice(0, 6).map((url, idx) => (
-              <div
-                key={idx}
-                className="aspect-[2/3] rounded border border-slate-700/50 bg-slate-950 overflow-hidden"
-              >
-                <img src={url} alt={`${title} ${idx + 1}`} className="w-full h-full object-cover" />
-              </div>
-            ))}
+          <div className="flex-1 overflow-x-auto overflow-y-hidden custom-scrollbar">
+            <div className="flex gap-2 h-full pb-1">
+              {works.map((url, idx) => (
+                <div
+                  key={idx}
+                  className="flex-shrink-0 w-20 aspect-[2/3] rounded border border-slate-700/50 bg-slate-950 overflow-hidden"
+                >
+                  <img src={url} alt={`${title} ${idx + 1}`} className="w-full h-full object-cover" />
+                </div>
+              ))}
+            </div>
           </div>
         ) : (
           <div className="flex-1 flex items-center justify-center text-slate-700">
