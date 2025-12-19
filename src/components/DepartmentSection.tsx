@@ -938,20 +938,20 @@ const WorkCard: React.FC<WorkCardProps> = ({
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      <div className="bg-[#1e293b]/30 rounded-xl p-4 border border-slate-800 h-full flex flex-col cursor-pointer hover:border-slate-700 transition-colors">
-        <div className="flex items-center justify-between mb-2">
-          <div className="text-[10px] text-slate-500 uppercase font-bold tracking-widest flex items-center gap-2">
-            <IconComponent size={11} className={isFinished ? 'text-emerald-400' : 'text-sky-400'} />
+      <div className="bg-[#1e293b]/30 rounded-xl p-2.5 border border-slate-800 h-full flex flex-col cursor-pointer hover:border-slate-700 transition-colors">
+        <div className="flex items-center justify-between mb-1.5">
+          <div className="text-[9px] text-slate-500 uppercase font-bold tracking-widest flex items-center gap-1.5">
+            <IconComponent size={10} className={isFinished ? 'text-emerald-400' : 'text-sky-400'} />
             {title}
-            <span className="text-[9px] text-slate-600 font-mono">({works.length})</span>
+            <span className="text-[8px] text-slate-600 font-mono">({works.length})</span>
           </div>
           {isUnlocked && onUploadWork && (
             <button
               onClick={handleUploadClick}
-              className="text-sky-500 hover:text-white transition-colors bg-sky-500/10 hover:bg-sky-500/20 rounded-lg p-1.5"
+              className="text-sky-500 hover:text-white transition-colors bg-sky-500/10 hover:bg-sky-500/20 rounded-lg p-1"
               title="上传作品"
             >
-              <Plus size={14} />
+              <Plus size={12} />
             </button>
           )}
           <input
@@ -964,8 +964,8 @@ const WorkCard: React.FC<WorkCardProps> = ({
         </div>
 
         {works.length > 0 ? (
-          <div className="flex-1 grid grid-cols-2 gap-2 overflow-hidden">
-            {works.slice(0, 4).map((url, idx) => (
+          <div className="flex-1 grid grid-cols-3 gap-1 overflow-hidden">
+            {works.slice(0, 6).map((url, idx) => (
               <div
                 key={idx}
                 className="aspect-[2/3] rounded border border-slate-700/50 bg-slate-950 overflow-hidden"
@@ -976,7 +976,7 @@ const WorkCard: React.FC<WorkCardProps> = ({
           </div>
         ) : (
           <div className="flex-1 flex items-center justify-center text-slate-700">
-            <span className="text-[10px] opacity-50">暂无{title}</span>
+            <span className="text-[9px] opacity-50">暂无{title}</span>
           </div>
         )}
       </div>
