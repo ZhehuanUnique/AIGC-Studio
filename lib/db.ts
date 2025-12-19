@@ -98,10 +98,10 @@ export async function updateTeam(team: any) {
         status = EXCLUDED.status,
         notes = EXCLUDED.notes,
         cover_image = EXCLUDED.cover_image,
-        images = EXCLUDED.images,
-        links = EXCLUDED.links,
-        unfinished_works = EXCLUDED.unfinished_works,
-        finished_works = EXCLUDED.finished_works,
+        images = EXCLUDED.images::jsonb,
+        links = EXCLUDED.links::jsonb,
+        unfinished_works = EXCLUDED.unfinished_works::jsonb,
+        finished_works = EXCLUDED.finished_works::jsonb,
         updated_at = CURRENT_TIMESTAMP
     `;
 
