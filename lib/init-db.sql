@@ -17,6 +17,8 @@ CREATE TABLE IF NOT EXISTS teams (
   cover_image TEXT,
   images JSONB DEFAULT '[]',
   links JSONB DEFAULT '[]',
+  unfinished_works JSONB DEFAULT '[]',
+  finished_works JSONB DEFAULT '[]',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

@@ -38,7 +38,9 @@ export async function getTeams() {
           '[]'
         ) as todos,
         COALESCE(t.links, '[]') as links,
-        COALESCE(t.images, '[]') as images
+        COALESCE(t.images, '[]') as images,
+        COALESCE(t.unfinished_works, '[]') as unfinished_works,
+        COALESCE(t.finished_works, '[]') as finished_works
       FROM teams t
       LEFT JOIN members m ON m.team_id = t.id
       LEFT JOIN todos td ON td.team_id = t.id
@@ -60,14 +62,16 @@ export async function updateTeam(team: any) {
       INSERT INTO teams (
         id, title, icon_key, task, cycle, workload, 
         budget, actual_cost, progress, status, notes, 
-        cover_image, images, links
+        cover_image, images, links, unfinished_works, finished_works
       ) VALUES (
         ${team.id}, ${team.title}, ${team.iconKey || team.icon_key || 'default'}, ${team.task || ''}, 
         ${team.cycle || ''}, ${team.workload || ''}, ${team.budget || 0}, 
         ${team.actualCost || team.actual_cost || 0}, ${team.progress || 0}, 
         ${team.status || 'normal'}, ${team.notes || ''}, 
         ${team.coverImage || team.cover_image || ''}, 
-        ${JSON.stringify(team.images || [])}, ${JSON.stringify(team.links || [])}
+        ${JSON.stringify(team.images || [])}, ${JSON.stringify(team.links || [])},
+        ${JSON.stringify(team.unfinishedWorks || team.unfinished_works || [])},
+        ${JSON.stringify(team.finishedWorks || team.finished_works || [])}
       )
       ON CONFLICT (id) DO UPDATE SET
         title = EXCLUDED.title,
@@ -82,7 +86,9 @@ export async function updateTeam(team: any) {
         notes = EXCLUDED.notes,
         cover_image = EXCLUDED.cover_image,
         images = EXCLUDED.images,
-        links = EXCLUDED.links
+        links = EXCLUDED.links,
+        unfinished_works = EXCLUDED.unfinished_works,
+        finished_works = EXCLUDED.finished_works
     `;
 
     // 删除旧的成员和 todos，重新插入

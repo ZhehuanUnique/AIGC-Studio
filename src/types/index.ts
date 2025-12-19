@@ -54,6 +54,8 @@ export interface Team {
   members: Member[];
   password?: string; // 团队管理员密码
   consumptionRecords?: ConsumptionRecord[]; // 即梦账号消费记录
+  unfinishedWorks?: string[]; // 未完成作品图片 URL 列表
+  finishedWorks?: string[]; // 已完成作品图片 URL 列表
 }
 
 export interface News {

@@ -83,7 +83,13 @@ function App() {
       })(),
       members: Array.isArray(team.members) ? team.members : [],
       todos: Array.isArray(team.todos) ? team.todos : [],
-      consumptionRecords: team.consumptionRecords ?? team.consumption_records ?? team.consumptionRecords ?? []
+      consumptionRecords: team.consumptionRecords ?? team.consumption_records ?? team.consumptionRecords ?? [],
+      unfinishedWorks: Array.isArray(team.unfinishedWorks) ? team.unfinishedWorks : (() => {
+        try { return JSON.parse(team.unfinished_works || team.unfinishedWorks || '[]'); } catch { return []; }
+      })(),
+      finishedWorks: Array.isArray(team.finishedWorks) ? team.finishedWorks : (() => {
+        try { return JSON.parse(team.finished_works || team.finishedWorks || '[]'); } catch { return []; }
+      })()
     } as Team;
   }, []);
   
@@ -246,6 +252,100 @@ function App() {
     const bytes = new Uint8Array(len);
     for (let i = 0; i < len; i++) bytes[i] = binStr.charCodeAt(i);
     return new Blob([bytes], { type: mime });
+  };
+
+  // 压缩图片为缩略图（支持指定宽高和比例）
+  const compressImage = (
+    file: File, 
+    options: {
+      maxWidth?: number;
+      maxHeight?: number;
+      aspectRatio?: '2:3' | 'square';
+      quality?: number;
+    } = {}
+  ): Promise<Blob> => {
+    const {
+      maxWidth = 600,
+      maxHeight = 900,
+      aspectRatio,
+      quality = 0.75
+    } = options;
+
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+
+          // 计算缩放比例（保持宽高比）
+          const scale = Math.min(maxWidth / width, maxHeight / height);
+          if (scale < 1) {
+            width = width * scale;
+            height = height * scale;
+          }
+
+          // 如果指定了比例，按比例裁剪
+          if (aspectRatio === '2:3') {
+            const targetRatio = 2 / 3;
+            const currentRatio = width / height;
+            
+            if (currentRatio > targetRatio) {
+              // 当前图片更宽，裁剪宽度
+              width = height * targetRatio;
+            } else {
+              // 当前图片更高，裁剪高度
+              height = width / targetRatio;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            reject(new Error('无法创建 canvas context'));
+            return;
+          }
+
+          // 如果指定了2:3比例，需要裁剪图片
+          if (aspectRatio === '2:3') {
+            const sourceRatio = img.width / img.height;
+            const targetRatio = 2 / 3;
+            
+            let sx = 0, sy = 0, sw = img.width, sh = img.height;
+            
+            if (sourceRatio > targetRatio) {
+              // 源图片更宽，裁剪左右
+              sw = img.height * targetRatio;
+              sx = (img.width - sw) / 2;
+            } else {
+              // 源图片更高，裁剪上下
+              sh = img.width / targetRatio;
+              sy = (img.height - sh) / 2;
+            }
+            
+            ctx.drawImage(img, sx, sy, sw, sh, 0, 0, width, height);
+          } else {
+            ctx.drawImage(img, 0, 0, width, height);
+          }
+
+          canvas.toBlob((blob) => {
+            if (blob) {
+              resolve(blob);
+            } else {
+              reject(new Error('图片压缩失败'));
+            }
+          }, 'image/jpeg', quality);
+        };
+        img.onerror = reject;
+        img.src = e.target?.result as string;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
   };
 
   // 迁移旧的 Base64(dataURL) 图片 -> Vercel Blob URL，避免 PUT /api/teams 触发 413
@@ -1026,6 +1126,97 @@ function App() {
     }
   }, [teams, useLocalStorage]);
 
+  // 上传作品图片（压缩为2:3比例的缩略图）
+  const handleUploadWork = useCallback(async (
+    groupId: string,
+    file: File,
+    isFinished: boolean
+  ) => {
+    try {
+      // 压缩图片为2:3比例（最大600x900px，质量0.75）
+      const compressedBlob = await compressImage(file, {
+        maxWidth: 600,
+        maxHeight: 900,
+        aspectRatio: '2:3',
+        quality: 0.75
+      });
+      // 上传到 Vercel Blob
+      const blobObj = await upload(
+        uniqueUploadName(file.name, isFinished ? 'finished-work' : 'unfinished-work'),
+        compressedBlob,
+        {
+          access: 'public',
+          handleUploadUrl: '/api/upload',
+        }
+      );
+
+      let updatedTeam: Team | null = null;
+      setTeams(prev => prev.map(t => {
+        if (t.id === groupId) {
+          const worksKey = isFinished ? 'finishedWorks' : 'unfinishedWorks';
+          const currentWorks = (t[worksKey] as string[] || []);
+          const newTeam = {
+            ...t,
+            [worksKey]: [...currentWorks, blobObj.url]
+          };
+          updatedTeam = newTeam;
+          return newTeam;
+        }
+        return t;
+      }));
+
+      // 保存到 API
+      if (!useLocalStorage && updatedTeam) {
+        try {
+          await teamsAPI.update(updatedTeam);
+          console.log('✅ 作品已上传');
+        } catch (err) {
+          console.error('上传失败:', err);
+          customAlert('⚠️ 作品已在本地保存，但同步到服务器失败，请检查网络连接');
+        }
+      }
+    } catch (err) {
+      console.error('作品上传失败:', err);
+      customAlert('⚠️ 作品上传失败，请检查网络或稍后重试。');
+    }
+  }, [useLocalStorage, compressImage, uniqueUploadName, customAlert]);
+
+  // 删除作品图片
+  const handleDeleteWork = useCallback(async (
+    groupId: string,
+    imageUrl: string,
+    isFinished: boolean
+  ) => {
+    let updatedTeam: Team | null = null;
+    setTeams(prev => prev.map(t => {
+      if (t.id === groupId) {
+        const worksKey = isFinished ? 'finishedWorks' : 'unfinishedWorks';
+        const currentWorks = (t[worksKey] as string[] || []).filter(url => url !== imageUrl);
+        const newTeam = {
+          ...t,
+          [worksKey]: currentWorks
+        };
+        updatedTeam = newTeam;
+        return newTeam;
+      }
+      return t;
+    }));
+
+    // 删除 Blob 存储中的文件
+    await deleteBlobByUrl(imageUrl);
+
+    // 保存到 API
+    if (!useLocalStorage && updatedTeam) {
+      try {
+        await teamsAPI.update(updatedTeam);
+        console.log('✅ 作品已删除');
+      } catch (err) {
+        console.error('删除失败:', err);
+        customAlert('⚠️ 作品已在本地删除，但同步到服务器失败，请检查网络连接');
+      }
+    }
+  }, [useLocalStorage, deleteBlobByUrl, customAlert]);
+
   // 实际添加账号支出记录
   const handleSaveConsumption = useCallback(async () => {
     if (!currentGroupId) return;
@@ -1447,6 +1638,8 @@ function App() {
               onEditReferences={openEditReferencesModal}
               onAddConsumption={openAddConsumptionModal}
               onDeleteConsumption={handleDeleteConsumptionRecord}
+              onUploadWork={handleUploadWork}
+              onDeleteWork={handleDeleteWork}
               onAddDirectorProject={addDirectorProject}
               onDeleteDirectorProject={deleteDirectorProject}
               onToggleLock={toggleGroupLock}
@@ -1621,11 +1814,37 @@ function App() {
                 onChange={(e) => setEditingGroup({ ...editingGroup, actualCost: Number(e.target.value) || 0 })}
               />
             </div>
-            <div className="grid grid-cols-1 gap-4">
+            <div className="mb-4">
+              <label className="block text-xs font-bold text-slate-400 uppercase mb-2">周期</label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => setEditingGroup({ ...editingGroup, cycle: '每日交付' })}
+                  className={`py-3 rounded-lg border text-xs font-bold transition-colors ${
+                    editingGroup.cycle === '每日交付'
+                      ? 'bg-slate-700 border-slate-600 text-white'
+                      : 'bg-slate-900 border-slate-700 text-slate-400 hover:border-slate-600'
+                  }`}
+                >
+                  每日交付
+                </button>
+                <button
+                  onClick={() => setEditingGroup({ ...editingGroup, cycle: '每周交付' })}
+                  className={`py-3 rounded-lg border text-xs font-bold transition-colors ${
+                    editingGroup.cycle === '每周交付'
+                      ? 'bg-slate-700 border-slate-600 text-white'
+                      : 'bg-slate-900 border-slate-700 text-slate-400 hover:border-slate-600'
+                  }`}
+                >
+                  每周交付
+                </button>
+              </div>
+            </div>
+            <div className="mb-4">
               <InputField
-                label="周期"
-                value={editingGroup.cycle || ''}
-                onChange={(e) => setEditingGroup({ ...editingGroup, cycle: e.target.value })}
+                label="交付量"
+                value={editingGroup.workload || ''}
+                onChange={(e) => setEditingGroup({ ...editingGroup, workload: e.target.value })}
+                placeholder="例如: 5集"
               />
             </div>
 
