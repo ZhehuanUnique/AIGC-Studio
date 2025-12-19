@@ -412,6 +412,16 @@ function App() {
       setAnnouncement(announcementData);
       setUseLocalStorage(false);
       console.log('✅ 数据已从云端数据库加载');
+      // 调试：打印加载的作品数据
+      teamsWithPasswords.forEach((team: Team) => {
+        if ((team.unfinishedWorks && team.unfinishedWorks.length > 0) || 
+            (team.finishedWorks && team.finishedWorks.length > 0)) {
+          console.log(`📥 加载团队 ${team.id} 的作品:`, {
+            unfinished: team.unfinishedWorks?.length || 0,
+            finished: team.finishedWorks?.length || 0
+          });
+        }
+      });
     } catch (error: any) {
       console.error('⚠️ API 加载失败，使用本地存储作为后备方案');
       console.error('错误类型:', error?.name || typeof error);
@@ -1199,9 +1209,19 @@ function App() {
             works: works
           });
           
-          await teamsAPI.update(updatedTeam);
+          // 确保字段名正确传递给 API
+          const teamToSave = {
+            ...teamData,
+            unfinishedWorks: teamData.unfinishedWorks || [],
+            finishedWorks: teamData.finishedWorks || []
+          };
+          
+          await teamsAPI.update(teamToSave);
           customAlert('✅ 作品上传成功！');
-          console.log('✅ 作品已上传并保存到数据库');
+          console.log('✅ 作品已上传并保存到数据库', {
+            unfinishedCount: teamToSave.unfinishedWorks?.length || 0,
+            finishedCount: teamToSave.finishedWorks?.length || 0
+          });
         } catch (err: any) {
           console.error('❌ 上传失败:', err);
           const errorMsg = err?.message || '未知错误';

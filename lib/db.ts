@@ -57,6 +57,14 @@ export async function getTeams() {
 // 更新团队数据（支持新增和更新）
 export async function updateTeam(team: any) {
   try {
+    // 调试：打印要保存的作品数据
+    const unfinishedWorks = team.unfinishedWorks || team.unfinished_works || [];
+    const finishedWorks = team.finishedWorks || team.finished_works || [];
+    console.log(`[DB] 保存团队 ${team.id}:`, {
+      unfinishedWorks: Array.isArray(unfinishedWorks) ? unfinishedWorks.length : 'not array',
+      finishedWorks: Array.isArray(finishedWorks) ? finishedWorks.length : 'not array'
+    });
+    
     // 使用 UPSERT：如果 id 存在则更新，不存在则插入
     await sql`
       INSERT INTO teams (
@@ -88,7 +96,8 @@ export async function updateTeam(team: any) {
         images = EXCLUDED.images,
         links = EXCLUDED.links,
         unfinished_works = EXCLUDED.unfinished_works,
-        finished_works = EXCLUDED.finished_works
+        finished_works = EXCLUDED.finished_works,
+        updated_at = CURRENT_TIMESTAMP
     `;
 
     // 删除旧的成员和 todos，重新插入
