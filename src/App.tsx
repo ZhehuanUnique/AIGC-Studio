@@ -83,7 +83,13 @@ function App() {
       })(),
       members: Array.isArray(team.members) ? team.members : [],
       todos: Array.isArray(team.todos) ? team.todos : [],
-      consumptionRecords: team.consumptionRecords ?? team.consumption_records ?? team.consumptionRecords ?? [],
+      consumptionRecords: Array.isArray(team.consumptionRecords) 
+        ? team.consumptionRecords 
+        : (Array.isArray(team.consumption_records) 
+          ? team.consumption_records 
+          : (() => {
+            try { return JSON.parse(team.consumption_records || '[]'); } catch { return []; }
+          })()),
       unfinishedWorks: Array.isArray(team.unfinishedWorks) ? team.unfinishedWorks : (() => {
         try { return JSON.parse(team.unfinished_works || team.unfinishedWorks || '[]'); } catch { return []; }
       })(),
@@ -1371,36 +1377,32 @@ function App() {
       note: consumptionNote.trim() || undefined
     };
 
+    let updatedTeamForAPI: Team | null = null;
+    
     setTeams(prev => prev.map(t => {
       if (t.id === currentGroupId) {
         const newRecords = [...(t.consumptionRecords || []), newRecord];
         // 自动计算实际消耗总额
         const totalConsumption = newRecords.reduce((sum, record) => sum + record.amount, 0);
-        return {
+        const updated = {
           ...t,
           consumptionRecords: newRecords,
           actualCost: totalConsumption
         };
+        updatedTeamForAPI = updated;
+        return updated;
       }
       return t;
     }));
 
     // 保存到 API
-    if (!useLocalStorage) {
-      const updatedTeam = teams.find(t => t.id === currentGroupId);
-      if (updatedTeam) {
-        const newRecords = [...(updatedTeam.consumptionRecords || []), newRecord];
-        const totalConsumption = newRecords.reduce((sum, record) => sum + record.amount, 0);
-        try {
-          await teamsAPI.update({
-            ...updatedTeam,
-            consumptionRecords: newRecords,
-            actualCost: totalConsumption
-          });
-          console.log('✅ 费用支出记录已保存');
-        } catch (err) {
-          console.error('保存失败:', err);
-        }
+    if (!useLocalStorage && updatedTeamForAPI) {
+      try {
+        await teamsAPI.update(updatedTeamForAPI);
+        console.log('✅ 费用支出记录已保存到数据库');
+      } catch (err) {
+        console.error('保存失败:', err);
+        customAlert('⚠️ 费用支出记录保存失败，请刷新后重试');
       }
     }
 

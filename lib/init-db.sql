@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS teams (
   links JSONB DEFAULT '[]',
   unfinished_works JSONB DEFAULT '[]',
   finished_works JSONB DEFAULT '[]',
+  consumption_records JSONB DEFAULT '[]',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

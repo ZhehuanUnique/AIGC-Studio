@@ -40,7 +40,8 @@ export async function getTeams() {
         COALESCE(t.links, '[]') as links,
         COALESCE(t.images, '[]') as images,
         COALESCE(t.unfinished_works, '[]') as unfinished_works,
-        COALESCE(t.finished_works, '[]') as finished_works
+        COALESCE(t.finished_works, '[]') as finished_works,
+        COALESCE(t.consumption_records, '[]') as consumption_records
       FROM teams t
       LEFT JOIN members m ON m.team_id = t.id
       LEFT JOIN todos td ON td.team_id = t.id
@@ -76,12 +77,13 @@ export async function updateTeam(team: any) {
     const linksArray = team.links || [];
     const unfinishedWorksArray = unfinishedWorks;
     const finishedWorksArray = finishedWorks;
+    const consumptionRecords = team.consumptionRecords || team.consumption_records || [];
     
     const result = await sql`
       INSERT INTO teams (
         id, title, icon_key, task, cycle, workload, 
         budget, actual_cost, progress, status, notes, 
-        cover_image, images, links, unfinished_works, finished_works
+        cover_image, images, links, unfinished_works, finished_works, consumption_records
       ) VALUES (
         ${team.id}, ${team.title}, ${team.iconKey || team.icon_key || 'default'}, ${team.task || ''}, 
         ${team.cycle || ''}, ${team.workload || ''}, ${team.budget || 0}, 
@@ -91,7 +93,8 @@ export async function updateTeam(team: any) {
         ${JSON.stringify(imagesArray)}::jsonb, 
         ${JSON.stringify(linksArray)}::jsonb,
         ${JSON.stringify(unfinishedWorksArray)}::jsonb,
-        ${JSON.stringify(finishedWorksArray)}::jsonb
+        ${JSON.stringify(finishedWorksArray)}::jsonb,
+        ${JSON.stringify(consumptionRecords)}::jsonb
       )
       ON CONFLICT (id) DO UPDATE SET
         title = EXCLUDED.title,
@@ -109,6 +112,7 @@ export async function updateTeam(team: any) {
         links = EXCLUDED.links,
         unfinished_works = EXCLUDED.unfinished_works,
         finished_works = EXCLUDED.finished_works,
+        consumption_records = EXCLUDED.consumption_records,
         updated_at = CURRENT_TIMESTAMP
     `;
 
