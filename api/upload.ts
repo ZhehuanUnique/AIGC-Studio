@@ -42,7 +42,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const json = await handleUpload({
       request: req,
       body: req.body,
-      onBeforeGenerateToken: async (pathname: string, clientPayload?: string | null) => {
+      onBeforeGenerateToken: async (pathname: string) => {
         console.log('生成 token for:', pathname);
         // 只允许图片
         return {
