@@ -19,6 +19,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ success: false, message: '方法不允许' });
 
+  // 检查环境变量
+  const hasBlobToken = !!process.env.BLOB_READ_WRITE_TOKEN;
+  if (!hasBlobToken) {
+    console.error('BLOB_READ_WRITE_TOKEN 环境变量未配置');
+    return res.status(500).json({ 
+      success: false, 
+      message: 'BLOB_READ_WRITE_TOKEN 环境变量未配置，请检查 Vercel 项目设置中的环境变量配置' 
+    });
+  }
+
   try {
     const json = await handleUpload({
       request: req,
@@ -43,7 +53,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).json(json);
   } catch (error: any) {
     console.error('upload handler error:', error);
-    return res.status(500).json({ success: false, message: error?.message || '上传初始化失败' });
+    console.error('错误详情:', {
+      message: error?.message,
+      name: error?.name,
+      stack: error?.stack
+    });
+    return res.status(500).json({ 
+      success: false, 
+      message: error?.message || '上传初始化失败',
+      error: process.env.NODE_ENV === 'development' ? error?.stack : undefined
+    });
   }
 }
 
