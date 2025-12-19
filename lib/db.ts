@@ -107,19 +107,40 @@ export async function updateTeam(team: any) {
 
     console.log(`[DB] 团队 ${team.id} 保存成功，影响行数:`, result.rowCount);
     
-    // 验证保存结果
+    // 验证保存结果 - 等待一小段时间确保事务提交
+    await new Promise(resolve => setTimeout(resolve, 100));
     const { rows: verifyRows } = await sql`
       SELECT unfinished_works, finished_works 
       FROM teams 
       WHERE id = ${team.id}
     `;
     if (verifyRows.length > 0) {
+      const dbUnfinished = verifyRows[0].unfinished_works;
+      const dbFinished = verifyRows[0].finished_works;
       console.log(`[DB] 验证保存结果:`, {
-        unfinished_works: verifyRows[0].unfinished_works,
-        finished_works: verifyRows[0].finished_works,
-        unfinished_count: Array.isArray(verifyRows[0].unfinished_works) ? verifyRows[0].unfinished_works.length : 'not array',
-        finished_count: Array.isArray(verifyRows[0].finished_works) ? verifyRows[0].finished_works.length : 'not array'
+        unfinished_works: dbUnfinished,
+        finished_works: dbFinished,
+        unfinished_type: typeof dbUnfinished,
+        finished_type: typeof dbFinished,
+        unfinished_is_array: Array.isArray(dbUnfinished),
+        finished_is_array: Array.isArray(dbFinished),
+        unfinished_count: Array.isArray(dbUnfinished) ? dbUnfinished.length : 'not array',
+        finished_count: Array.isArray(dbFinished) ? dbFinished.length : 'not array',
+        expected_unfinished: unfinishedWorks.length,
+        expected_finished: finishedWorks.length
       });
+      
+      // 如果数据不匹配，记录详细错误
+      const unfinishedMatch = Array.isArray(dbUnfinished) && dbUnfinished.length === unfinishedWorks.length;
+      const finishedMatch = Array.isArray(dbFinished) && dbFinished.length === finishedWorks.length;
+      if (!unfinishedMatch || !finishedMatch) {
+        console.error(`[DB] ❌ 数据不匹配！`, {
+          unfinished: { expected: unfinishedWorks.length, actual: Array.isArray(dbUnfinished) ? dbUnfinished.length : 'N/A' },
+          finished: { expected: finishedWorks.length, actual: Array.isArray(dbFinished) ? dbFinished.length : 'N/A' }
+        });
+      }
+    } else {
+      console.error(`[DB] ❌ 验证失败：未找到团队 ${team.id}`);
     }
 
     // 删除旧的成员和 todos，重新插入

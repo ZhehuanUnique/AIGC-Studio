@@ -22,7 +22,14 @@ export default async function handler(
     } else if (req.method === 'PUT') {
       // 更新团队数据
       const team = req.body;
+      console.log(`[API] 收到更新请求 - 团队 ${team?.id}:`, {
+        hasUnfinishedWorks: !!(team?.unfinishedWorks || team?.unfinished_works),
+        hasFinishedWorks: !!(team?.finishedWorks || team?.finished_works),
+        unfinishedCount: (team?.unfinishedWorks || team?.unfinished_works || []).length,
+        finishedCount: (team?.finishedWorks || team?.finished_works || []).length
+      });
       await updateTeam(team);
+      console.log(`[API] 更新完成 - 团队 ${team?.id}`);
       return res.status(200).json({ success: true });
     } else if (req.method === 'DELETE') {
       const id = (req.query?.id as string) || (req.body?.id as string);
