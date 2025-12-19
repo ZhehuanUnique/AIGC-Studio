@@ -772,11 +772,12 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
               {team.consumptionRecords && team.consumptionRecords.length > 0 ? (
                 <div className="space-y-2">
                   {team.consumptionRecords.map((record, idx) => {
-                    const platformNames = { jimeng: '即梦', hailuo: '海螺', vidu: 'Vidu' };
+                    const platformNames = { jimeng: '即梦', hailuo: '海螺', vidu: 'Vidu', other: '其它' };
                     const platformColors = { 
                       jimeng: 'text-blue-400 bg-blue-500/10 border-blue-500/20', 
                       hailuo: 'text-purple-400 bg-purple-500/10 border-purple-500/20', 
-                      vidu: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' 
+                      vidu: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
+                      other: 'text-orange-400 bg-orange-500/10 border-orange-500/20'
                     };
                     const amountColors = {
                       299: 'text-blue-400',

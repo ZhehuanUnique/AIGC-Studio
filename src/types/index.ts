@@ -28,9 +28,9 @@ export interface ResourceLink {
 
 export interface ConsumptionRecord {
   id: string;
-  platform: 'jimeng' | 'hailuo' | 'vidu';  // 平台: 即梦、海螺、Vidu
-  package: 'jimeng-299' | 'jimeng-499' | 'hailuo-1399' | 'vidu-499';  // 套餐类型
-  amount: number;    // 金额: 299/499/1399/499
+  platform: 'jimeng' | 'hailuo' | 'vidu' | 'other';  // 平台: 即梦、海螺、Vidu、其它
+  package: 'jimeng-299' | 'jimeng-499' | 'hailuo-1399' | 'vidu-499' | 'custom';  // 套餐类型或自定义
+  amount: number;    // 金额
   datetime: string;  // 日期+时间
   note?: string;     // 可选备注
 }

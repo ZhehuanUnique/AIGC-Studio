@@ -3,9 +3,9 @@ import {
   Search, Plus, Trash2, X, Image as ImageIcon, Save, RefreshCw, Upload,
   CheckCircle, CheckSquare, ListTodo, Square,
   Download, FileJson, ClipboardList, Unlock,
-  Wrench, Megaphone
+  Wrench, Megaphone, GripVertical
 } from 'lucide-react';
-import { Team, Member, Todo, ResourceLink } from './types';
+import { Team, Member, Todo, ResourceLink, ConsumptionRecord } from './types';
 import { 
   STORAGE_KEY, INITIAL_ANNOUNCEMENT, INITIAL_TEAMS,
   STATUS_CONFIG, AI_TOOLS, PROJECT_PHASES
@@ -109,9 +109,14 @@ function App() {
   const [showReferencesModal, setShowReferencesModal] = useState<boolean>(false);
   const [showConsumptionModal, setShowConsumptionModal] = useState<boolean>(false);
   const [currentGroupId, setCurrentGroupId] = useState<string>('');
-  const [consumptionPlatform, setConsumptionPlatform] = useState<'jimeng' | 'hailuo' | 'vidu'>('jimeng');
-  const [consumptionPackage, setConsumptionPackage] = useState<'jimeng-299' | 'jimeng-499' | 'hailuo-1399' | 'vidu-499'>('jimeng-299');
+  const [consumptionPlatform, setConsumptionPlatform] = useState<'jimeng' | 'hailuo' | 'vidu' | 'other'>('jimeng');
+  const [consumptionPackage, setConsumptionPackage] = useState<'jimeng-299' | 'jimeng-499' | 'hailuo-1399' | 'vidu-499' | 'custom'>('jimeng-299');
+  const [consumptionCustomAmount, setConsumptionCustomAmount] = useState<string>('');
   const [consumptionNote, setConsumptionNote] = useState<string>('');
+  
+  // 拖拽排序相关状态
+  const [draggedTeamId, setDraggedTeamId] = useState<string | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   // 资源链接模块已从“部门管理”弹窗移除，相关 state 先移除
   const [newTaskText, setNewTaskText] = useState<string>('');
   const announcementTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1326,13 +1331,24 @@ function App() {
     if (!currentGroupId) return;
 
     // 获取金额
-    const amountMap = {
+    const amountMap: Record<'jimeng-299' | 'jimeng-499' | 'hailuo-1399' | 'vidu-499', number> = {
       'jimeng-299': 299,
       'jimeng-499': 499,
       'hailuo-1399': 1399,
       'vidu-499': 499
     };
-    const amount = amountMap[consumptionPackage];
+    
+    let amount: number;
+    if (consumptionPackage === 'custom') {
+      const customAmount = parseFloat(consumptionCustomAmount);
+      if (isNaN(customAmount) || customAmount <= 0) {
+        customAlert('⚠️ 请输入有效的金额');
+        return;
+      }
+      amount = customAmount;
+    } else {
+      amount = amountMap[consumptionPackage] || 0;
+    }
 
     // 生成日期+时间
     const now = new Date();
@@ -1344,7 +1360,7 @@ function App() {
       hour12: false 
     });
 
-    const newRecord = {
+    const newRecord: ConsumptionRecord = {
       id: `cr-${Date.now()}`,
       platform: consumptionPlatform,
       package: consumptionPackage,
@@ -1389,9 +1405,59 @@ function App() {
     // 重置表单并关闭
     setConsumptionPlatform('jimeng');
     setConsumptionPackage('jimeng-299');
+    setConsumptionCustomAmount('');
     setConsumptionNote('');
     setShowConsumptionModal(false);
-  }, [currentGroupId, consumptionPlatform, consumptionPackage, consumptionNote, teams, useLocalStorage]);
+  }, [currentGroupId, consumptionPlatform, consumptionPackage, consumptionCustomAmount, consumptionNote, teams, useLocalStorage, customAlert]);
+
+  // 拖拽排序功能
+  const handleDragStart = useCallback((e: React.DragEvent, teamId: string) => {
+    setDraggedTeamId(teamId);
+    e.dataTransfer.effectAllowed = 'move';
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverIndex(index);
+  }, []);
+
+  const handleDragLeave = useCallback(() => {
+    setDragOverIndex(null);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    if (!draggedTeamId) return;
+
+    // 使用当前 teams 状态来查找索引
+    const draggedIndex = teams.findIndex(t => t.id === draggedTeamId);
+    if (draggedIndex === -1 || draggedIndex === dropIndex) {
+      setDraggedTeamId(null);
+      setDragOverIndex(null);
+      return;
+    }
+
+    // 重新排序
+    const newTeams = [...teams];
+    const [draggedTeam] = newTeams.splice(draggedIndex, 1);
+    newTeams.splice(dropIndex, 0, draggedTeam);
+
+    setTeams(newTeams);
+    
+    // 保存到 localStorage
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ teams: newTeams, announcement }));
+    
+    // 保存到 API（更新所有团队的顺序）
+    if (!useLocalStorage) {
+      Promise.all(newTeams.map(team => teamsAPI.update(team))).catch(err => {
+        console.error('保存排序失败:', err);
+      });
+    }
+
+    setDraggedTeamId(null);
+    setDragOverIndex(null);
+  }, [draggedTeamId, teams, announcement, useLocalStorage]);
 
   const toggleTask = useCallback((taskId: string) => {
     setEditingGroup(prev => prev ? ({
@@ -1717,37 +1783,51 @@ function App() {
         </div>
         <div className="space-y-2">
           {filteredTeams.map((team, index) => (
-            <DepartmentSection
+            <div
               key={team.id}
-              team={team}
-              index={index}
-              isEditing={isAdminUnlocked}
-              isUnlocked={unlockedGroups.has(team.id) || isAdminUnlocked}
-              theme={theme}
-              onEditMember={openEditMemberModal}
-              onAddMember={openAddMemberModal}
-              onDeleteMember={handleDeleteMemberDirect}
-              onToggleTodo={handleToggleTodoDirect}
-              onAddTodo={handleAddTodoDirect}
-              onDeleteTodo={handleDeleteTodoDirect}
-              onEditGroup={(group) => {
-                setEditingGroup(group);
-                setShowGroupModal(true);
-              }}
-              onDeleteGroup={handleDeleteGroup}
-              memberTasks={memberTasksByTeam[team.id] || {}}
-              onAddMemberTask={addMemberTask}
-              onToggleMemberTask={toggleMemberTask}
-              onDeleteMemberTask={deleteMemberTask}
-              onEditReferences={openEditReferencesModal}
-              onAddConsumption={openAddConsumptionModal}
-              onDeleteConsumption={handleDeleteConsumptionRecord}
-              onUploadWork={handleUploadWork}
-              onDeleteWork={handleDeleteWork}
-              onAddDirectorProject={addDirectorProject}
-              onDeleteDirectorProject={deleteDirectorProject}
-              onToggleLock={toggleGroupLock}
-            />
+              draggable={isAdminUnlocked}
+              onDragStart={(e) => handleDragStart(e, team.id)}
+              onDragOver={(e) => handleDragOver(e, index)}
+              onDragLeave={handleDragLeave}
+              onDrop={(e) => handleDrop(e, index)}
+              className={`relative ${draggedTeamId === team.id ? 'opacity-50' : ''} ${dragOverIndex === index ? 'border-t-2 border-sky-500' : ''}`}
+            >
+              {isAdminUnlocked && (
+                <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-8 w-6 h-6 flex items-center justify-center text-slate-600 hover:text-slate-400 cursor-move z-10">
+                  <GripVertical size={16} />
+                </div>
+              )}
+              <DepartmentSection
+                team={team}
+                index={index}
+                isEditing={isAdminUnlocked}
+                isUnlocked={unlockedGroups.has(team.id) || isAdminUnlocked}
+                theme={theme}
+                onEditMember={openEditMemberModal}
+                onAddMember={openAddMemberModal}
+                onDeleteMember={handleDeleteMemberDirect}
+                onToggleTodo={handleToggleTodoDirect}
+                onAddTodo={handleAddTodoDirect}
+                onDeleteTodo={handleDeleteTodoDirect}
+                onEditGroup={(group) => {
+                  setEditingGroup(group);
+                  setShowGroupModal(true);
+                }}
+                onDeleteGroup={handleDeleteGroup}
+                memberTasks={memberTasksByTeam[team.id] || {}}
+                onAddMemberTask={addMemberTask}
+                onToggleMemberTask={toggleMemberTask}
+                onDeleteMemberTask={deleteMemberTask}
+                onEditReferences={openEditReferencesModal}
+                onAddConsumption={openAddConsumptionModal}
+                onDeleteConsumption={handleDeleteConsumptionRecord}
+                onUploadWork={handleUploadWork}
+                onDeleteWork={handleDeleteWork}
+                onAddDirectorProject={addDirectorProject}
+                onDeleteDirectorProject={deleteDirectorProject}
+                onToggleLock={toggleGroupLock}
+              />
+            </div>
           ))}
         </div>
 
@@ -2086,11 +2166,12 @@ function App() {
           {/* 平台选择 */}
           <div>
             <label className="block text-xs font-bold text-slate-400 mb-3">选择平台</label>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-4 gap-3">
               <button
                 onClick={() => {
                   setConsumptionPlatform('jimeng');
                   setConsumptionPackage('jimeng-299');
+                  setConsumptionCustomAmount('');
                 }}
                 className={`p-3 rounded-lg border-2 transition-all ${
                   consumptionPlatform === 'jimeng'
@@ -2104,6 +2185,7 @@ function App() {
                 onClick={() => {
                   setConsumptionPlatform('hailuo');
                   setConsumptionPackage('hailuo-1399');
+                  setConsumptionCustomAmount('');
                 }}
                 className={`p-3 rounded-lg border-2 transition-all ${
                   consumptionPlatform === 'hailuo'
@@ -2117,6 +2199,7 @@ function App() {
                 onClick={() => {
                   setConsumptionPlatform('vidu');
                   setConsumptionPackage('vidu-499');
+                  setConsumptionCustomAmount('');
                 }}
                 className={`p-3 rounded-lg border-2 transition-all ${
                   consumptionPlatform === 'vidu'
@@ -2126,16 +2209,33 @@ function App() {
               >
                 <div className="text-base font-bold">Vidu</div>
               </button>
+              <button
+                onClick={() => {
+                  setConsumptionPlatform('other');
+                  setConsumptionPackage('custom');
+                  setConsumptionCustomAmount('');
+                }}
+                className={`p-3 rounded-lg border-2 transition-all ${
+                  consumptionPlatform === 'other'
+                    ? 'border-orange-500 bg-orange-500/20 text-orange-300'
+                    : 'border-slate-700 bg-slate-900 text-slate-400 hover:border-slate-600'
+                }`}
+              >
+                <div className="text-base font-bold">其它</div>
+              </button>
             </div>
           </div>
 
-          {/* 套餐选择 */}
+          {/* 费用金额 */}
           <div>
-            <label className="block text-xs font-bold text-slate-400 mb-3">选择套餐</label>
+            <label className="block text-xs font-bold text-slate-400 mb-3">费用金额</label>
             {consumptionPlatform === 'jimeng' && (
               <div className="grid grid-cols-2 gap-3">
                 <button
-                  onClick={() => setConsumptionPackage('jimeng-299')}
+                  onClick={() => {
+                    setConsumptionPackage('jimeng-299');
+                    setConsumptionCustomAmount('');
+                  }}
                   className={`p-4 rounded-lg border-2 transition-all ${
                     consumptionPackage === 'jimeng-299'
                       ? 'border-blue-500 bg-blue-500/10 text-blue-400'
@@ -2146,7 +2246,10 @@ function App() {
                   <div className="text-xs mt-1">首次充值</div>
                 </button>
                 <button
-                  onClick={() => setConsumptionPackage('jimeng-499')}
+                  onClick={() => {
+                    setConsumptionPackage('jimeng-499');
+                    setConsumptionCustomAmount('');
+                  }}
                   className={`p-4 rounded-lg border-2 transition-all ${
                     consumptionPackage === 'jimeng-499'
                       ? 'border-purple-500 bg-purple-500/10 text-purple-400'
@@ -2160,7 +2263,10 @@ function App() {
             )}
             {consumptionPlatform === 'hailuo' && (
               <button
-                onClick={() => setConsumptionPackage('hailuo-1399')}
+                onClick={() => {
+                  setConsumptionPackage('hailuo-1399');
+                  setConsumptionCustomAmount('');
+                }}
                 className="w-full p-4 rounded-lg border-2 border-purple-500 bg-purple-500/10 text-purple-400"
               >
                 <div className="text-2xl font-bold">¥1399</div>
@@ -2169,12 +2275,31 @@ function App() {
             )}
             {consumptionPlatform === 'vidu' && (
               <button
-                onClick={() => setConsumptionPackage('vidu-499')}
+                onClick={() => {
+                  setConsumptionPackage('vidu-499');
+                  setConsumptionCustomAmount('');
+                }}
                 className="w-full p-4 rounded-lg border-2 border-emerald-500 bg-emerald-500/10 text-emerald-400"
               >
                 <div className="text-2xl font-bold">¥499</div>
                 <div className="text-xs mt-1">Vidu套餐</div>
               </button>
+            )}
+            {(consumptionPlatform === 'other' || consumptionPackage === 'custom') && (
+              <div>
+                <input
+                  type="number"
+                  value={consumptionCustomAmount}
+                  onChange={(e) => {
+                    setConsumptionCustomAmount(e.target.value);
+                    setConsumptionPackage('custom');
+                  }}
+                  placeholder="请输入金额"
+                  min="0"
+                  step="0.01"
+                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-lg text-slate-200 placeholder-slate-600 outline-none focus:border-orange-500"
+                />
+              </div>
             )}
           </div>
 
@@ -2184,7 +2309,7 @@ function App() {
             <textarea
               value={consumptionNote}
               onChange={(e) => setConsumptionNote(e.target.value)}
-              placeholder="例如：用于XX项目、测试账号等..."
+              placeholder="例如：姓名、目的等..."
               className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 placeholder-slate-600 outline-none focus:border-sky-500 resize-none"
               rows={3}
             />

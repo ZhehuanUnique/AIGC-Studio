@@ -70,7 +70,7 @@ CREATE INDEX IF NOT EXISTS idx_news_date ON news(date);
 CREATE INDEX IF NOT EXISTS idx_news_type ON news(type);
 
 -- 插入默认公告
-INSERT INTO announcement (id, content) VALUES (1, '🎉 通告：V16 全功能版已上线！包含任务清单与费用管理模块。HMR 热更新测试成功！')
+INSERT INTO announcement (id, content) VALUES (1, '🎉 通告：全功能版已上线！')
 ON CONFLICT (id) DO NOTHING;
 
 -- 可选：插入初始数据
