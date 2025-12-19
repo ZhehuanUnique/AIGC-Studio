@@ -117,6 +117,7 @@ function App() {
   // 拖拽排序相关状态
   const [draggedTeamId, setDraggedTeamId] = useState<string | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const scrollIntervalRef = useRef<number | null>(null);
   // 资源链接模块已从“部门管理”弹窗移除，相关 state 先移除
   const [newTaskText, setNewTaskText] = useState<string>('');
   const announcementTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1410,24 +1411,72 @@ function App() {
     setShowConsumptionModal(false);
   }, [currentGroupId, consumptionPlatform, consumptionPackage, consumptionCustomAmount, consumptionNote, teams, useLocalStorage, customAlert]);
 
+  // 自动滚动功能
+  const startAutoScroll = useCallback((direction: 'up' | 'down') => {
+    if (scrollIntervalRef.current) return;
+    
+    const scrollSpeed = 15; // 滚动速度
+    scrollIntervalRef.current = window.setInterval(() => {
+      const scrollAmount = direction === 'up' ? -scrollSpeed : scrollSpeed;
+      window.scrollBy({ top: scrollAmount, behavior: 'auto' });
+    }, 16); // ~60fps
+  }, []);
+
+  const stopAutoScroll = useCallback(() => {
+    if (scrollIntervalRef.current) {
+      clearInterval(scrollIntervalRef.current);
+      scrollIntervalRef.current = null;
+    }
+  }, []);
+
+  // 检查是否需要自动滚动
+  const checkAutoScroll = useCallback((clientY: number) => {
+    const scrollThreshold = 100; // 距离顶部/底部多少像素时开始滚动
+    const windowHeight = window.innerHeight;
+    
+    if (clientY < scrollThreshold) {
+      startAutoScroll('up');
+    } else if (clientY > windowHeight - scrollThreshold) {
+      startAutoScroll('down');
+    } else {
+      stopAutoScroll();
+    }
+  }, [startAutoScroll, stopAutoScroll]);
+
   // 拖拽排序功能
   const handleDragStart = useCallback((e: React.DragEvent, teamId: string) => {
     setDraggedTeamId(teamId);
     e.dataTransfer.effectAllowed = 'move';
+    // 设置拖拽预览为空，使用自定义预览
+    const dragImage = document.createElement('div');
+    dragImage.style.opacity = '0';
+    e.dataTransfer.setDragImage(dragImage, 0, 0);
   }, []);
 
   const handleDragOver = useCallback((e: React.DragEvent, index: number) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
     setDragOverIndex(index);
-  }, []);
+    
+    // 检查是否需要自动滚动
+    checkAutoScroll(e.clientY);
+  }, [checkAutoScroll]);
 
   const handleDragLeave = useCallback(() => {
+    // 不立即清除 dragOverIndex，允许平滑过渡
+    stopAutoScroll();
+  }, [stopAutoScroll]);
+
+  const handleDragEnd = useCallback(() => {
+    stopAutoScroll();
+    setDraggedTeamId(null);
     setDragOverIndex(null);
-  }, []);
+  }, [stopAutoScroll]);
 
   const handleDrop = useCallback((e: React.DragEvent, dropIndex: number) => {
     e.preventDefault();
+    stopAutoScroll();
+    
     if (!draggedTeamId) return;
 
     // 使用当前 teams 状态来查找索引
@@ -1457,7 +1506,16 @@ function App() {
 
     setDraggedTeamId(null);
     setDragOverIndex(null);
-  }, [draggedTeamId, teams, announcement, useLocalStorage]);
+  }, [draggedTeamId, teams, announcement, useLocalStorage, stopAutoScroll]);
+
+  // 清理自动滚动定时器
+  useEffect(() => {
+    return () => {
+      if (scrollIntervalRef.current) {
+        clearInterval(scrollIntervalRef.current);
+      }
+    };
+  }, []);
 
   const toggleTask = useCallback((taskId: string) => {
     setEditingGroup(prev => prev ? ({
@@ -1782,16 +1840,48 @@ function App() {
           </div>
         </div>
         <div className="space-y-2">
-          {filteredTeams.map((team, index) => (
-            <div
-              key={team.id}
-              draggable={isAdminUnlocked}
-              onDragStart={(e) => handleDragStart(e, team.id)}
-              onDragOver={(e) => handleDragOver(e, index)}
-              onDragLeave={handleDragLeave}
-              onDrop={(e) => handleDrop(e, index)}
-              className={`relative ${draggedTeamId === team.id ? 'opacity-50' : ''} ${dragOverIndex === index ? 'border-t-2 border-sky-500' : ''}`}
-            >
+          {filteredTeams.map((team, index) => {
+            const isDragged = draggedTeamId === team.id;
+            const isDragOver = dragOverIndex === index;
+            const draggedIndex = draggedTeamId ? teams.findIndex(t => t.id === draggedTeamId) : -1;
+            
+            // 计算当前项的视觉位置偏移（用于平滑动画）
+            let transformY = 0;
+            if (isDragged) {
+              // 被拖拽的项保持原位但半透明
+            } else if (draggedIndex !== -1 && dragOverIndex !== null) {
+              // 如果当前项在被拖拽项和目标位置之间，需要向上或向下移动
+              if (index > draggedIndex && index <= dragOverIndex) {
+                // 向下移动（被拖拽项从上方插入）
+                transformY = -1; // 负值表示向上移动，创建"被挤走"的效果
+              } else if (index < draggedIndex && index >= dragOverIndex) {
+                // 向上移动（被拖拽项从下方插入）
+                transformY = 1; // 正值表示向下移动
+              }
+            }
+            
+            return (
+              <div
+                key={team.id}
+                draggable={isAdminUnlocked}
+                onDragStart={(e) => handleDragStart(e, team.id)}
+                onDragOver={(e) => handleDragOver(e, index)}
+                onDragLeave={handleDragLeave}
+                onDragEnd={handleDragEnd}
+                onDrop={(e) => handleDrop(e, index)}
+                className={`relative transition-all duration-200 ease-out ${
+                  isDragged 
+                    ? 'opacity-40 scale-95' 
+                    : 'opacity-100 scale-100'
+                } ${
+                  isDragOver 
+                    ? 'border-t-2 border-sky-500 -mt-2' 
+                    : 'border-t-2 border-transparent'
+                }`}
+                style={{
+                  transform: transformY !== 0 ? `translateY(${transformY * 8}px)` : undefined,
+                }}
+              >
               {isAdminUnlocked && (
                 <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-8 w-6 h-6 flex items-center justify-center text-slate-600 hover:text-slate-400 cursor-move z-10">
                   <GripVertical size={16} />
@@ -1827,8 +1917,9 @@ function App() {
                 onDeleteDirectorProject={deleteDirectorProject}
                 onToggleLock={toggleGroupLock}
               />
-            </div>
-          ))}
+              </div>
+            );
+          })}
         </div>
 
         {/* 页面底部：新增组入口（仅管理员解锁可见） */}
