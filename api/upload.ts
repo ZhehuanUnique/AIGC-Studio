@@ -42,7 +42,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const json = await handleUpload({
       request: req,
       body: req.body,
-      onBeforeGenerateToken: async (pathname: string, clientPayload?: string) => {
+      onBeforeGenerateToken: async (pathname: string, clientPayload?: string | null) => {
         console.log('生成 token for:', pathname);
         // 只允许图片
         return {
@@ -55,7 +55,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           tokenPayload: JSON.stringify({ pathname }),
         };
       },
-      onUploadCompleted: async ({ blob, tokenPayload }) => {
+      onUploadCompleted: async ({ blob }) => {
         console.log('上传完成:', blob.url);
       },
     });
