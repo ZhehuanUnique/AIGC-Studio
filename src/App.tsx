@@ -1164,28 +1164,46 @@ function App() {
       );
 
       let updatedTeam: Team | null = null;
-      setTeams(prev => prev.map(t => {
-        if (t.id === groupId) {
-          const worksKey = isFinished ? 'finishedWorks' : 'unfinishedWorks';
-          const currentWorks = (t[worksKey] as string[] || []);
-          const newTeam = {
-            ...t,
-            [worksKey]: [...currentWorks, blobObj.url]
-          };
-          updatedTeam = newTeam;
-          return newTeam;
-        }
-        return t;
-      }));
+      setTeams(prev => {
+        const updated = prev.map(t => {
+          if (t.id === groupId) {
+            const worksKey = isFinished ? 'finishedWorks' : 'unfinishedWorks';
+            const currentWorks = (t[worksKey] as string[] || []);
+            const newTeam: Team = {
+              ...t,
+              [worksKey]: [...currentWorks, blobObj.url]
+            };
+            updatedTeam = newTeam;
+            return newTeam;
+          }
+          return t;
+        });
+        // 同时更新 localStorage
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ teams: updated, announcement }));
+        return updated;
+      });
 
       // 保存到 API
       if (!useLocalStorage && updatedTeam) {
         try {
+          // 调试日志：打印要保存的数据
+          const worksKey = isFinished ? 'finishedWorks' : 'unfinishedWorks';
+          const teamData = updatedTeam as Team;
+          const works = isFinished 
+            ? (teamData.finishedWorks || [])
+            : (teamData.unfinishedWorks || []);
+          console.log(`📤 准备保存作品到数据库:`, {
+            teamId: teamData.id,
+            worksKey,
+            worksCount: works.length,
+            works: works
+          });
+          
           await teamsAPI.update(updatedTeam);
           customAlert('✅ 作品上传成功！');
-          console.log('✅ 作品已上传');
+          console.log('✅ 作品已上传并保存到数据库');
         } catch (err: any) {
-          console.error('上传失败:', err);
+          console.error('❌ 上传失败:', err);
           const errorMsg = err?.message || '未知错误';
           // 如果错误提示缺少字段，说明数据库需要迁移
           if (errorMsg.includes('unfinished_works') || errorMsg.includes('finished_works') || errorMsg.includes('column') || errorMsg.includes('不存在')) {
@@ -1202,7 +1220,7 @@ function App() {
       console.error('作品上传失败:', err);
       customAlert('⚠️ 作品上传失败，请检查网络或稍后重试。');
     }
-  }, [useLocalStorage, compressImage, uniqueUploadName, customAlert]);
+  }, [useLocalStorage, compressImage, uniqueUploadName, customAlert, announcement]);
 
   // 删除作品图片
   const handleDeleteWork = useCallback(async (
