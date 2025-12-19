@@ -258,9 +258,9 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
             <ProgressBar progress={team.progress} />
           </div>
 
-          {/* 未完成作品 + 已完成作品：两列布局 */}
+          {/* 待做 + 已完成：两列布局 */}
           <div className="w-full grid grid-cols-2 gap-3">
-            {/* 左列：未完成作品 */}
+            {/* 左列：待做 */}
             <div className="flex-1 min-h-0">
               <WorkCard
                 team={team}
@@ -271,7 +271,7 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
               />
             </div>
 
-            {/* 右列：已完成作品 */}
+            {/* 右列：已完成 */}
             <div className="flex-1 min-h-0">
               <WorkCard
                 team={team}
@@ -750,13 +750,13 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
             </div>
           </div>
         </div>
-        {/* 封面图 + 账号支出：两列布局 */}
+        {/* 封面图 + 费用支出：两列布局 */}
         <div className="lg:col-span-7 grid grid-cols-2 gap-4">
-          {/* 左列：账号支出 */}
+          {/* 左列：费用支出 */}
           <div className="bg-[#1e293b]/30 rounded-xl p-5 border border-slate-800 flex flex-col h-full">
             <div className="flex items-center justify-between mb-3">
               <div className="text-[11px] text-slate-500 uppercase font-bold tracking-widest flex items-center gap-2">
-                <Receipt size={14} /> 账号支出
+                <Receipt size={14} /> 费用支出
               </div>
               {onAddConsumption && (
                 <button
@@ -896,7 +896,7 @@ const WorkCard: React.FC<WorkCardProps> = ({
   const cardRef = useRef<HTMLDivElement>(null);
 
   const works = isFinished ? (team.finishedWorks || []) : (team.unfinishedWorks || []);
-  const title = isFinished ? '已完成作品' : '未完成作品';
+  const title = isFinished ? '已完成' : '待做';
   const IconComponent = isFinished ? CheckSquare : Square;
 
   const handleMouseEnter = () => {

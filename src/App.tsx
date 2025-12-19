@@ -1113,7 +1113,7 @@ function App() {
     setShowConsumptionModal(true);
   }, []);
 
-  // 删除账号支出记录
+  // 删除费用支出记录
   const handleDeleteConsumptionRecord = useCallback(async (groupId: string, recordId: string) => {
     setTeams(prev => prev.map(t => {
       if (t.id === groupId) {
@@ -1316,7 +1316,7 @@ function App() {
     }
   }, [useLocalStorage, deleteBlobByUrl, customAlert]);
 
-  // 实际添加账号支出记录
+  // 实际添加费用支出记录
   const handleSaveConsumption = useCallback(async () => {
     if (!currentGroupId) return;
 
@@ -1374,7 +1374,7 @@ function App() {
             consumptionRecords: newRecords,
             actualCost: totalConsumption
           });
-          console.log('✅ 账号支出记录已保存');
+          console.log('✅ 费用支出记录已保存');
         } catch (err) {
           console.error('保存失败:', err);
         }
@@ -2027,7 +2027,7 @@ function App() {
             {/* 已按需求移除：核心任务、日工作量、主参考图、辅助参考图库、消耗即梦账号数、资源链接
                 说明：
                 - 参考图请在卡片“参考图设置”里调整
-                - 账号支出请在卡片“账号支出”里调整
+                - 费用支出请在卡片"费用支出"里调整
             */}
             <div className="flex justify-end pt-4 border-t border-slate-700/50">
               <button
@@ -2071,11 +2071,11 @@ function App() {
         </div>
       </Modal>
 
-      {/* 添加账号支出记录模态框 */}
+      {/* 添加费用支出记录模态框 */}
       <Modal
         isOpen={showConsumptionModal}
         onClose={() => setShowConsumptionModal(false)}
-        title="添加账号支出记录"
+        title="添加费用支出记录"
       >
         <div className="space-y-5">
           {/* 平台选择 */}
