@@ -37,6 +37,7 @@ interface DepartmentSectionProps {
   onAddDirectorProject?: (groupId: string, directorId: string) => void;
   onDeleteDirectorProject?: (groupId: string, directorId: string, projectIndex: number) => void;
   onToggleLock: (team: Team) => void;
+  onProgressChange?: (groupId: string, progress: number) => void;
 }
 
 export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
@@ -64,7 +65,8 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
   onDeleteWork,
   onAddDirectorProject,
   onDeleteDirectorProject,
-  onToggleLock
+  onToggleLock,
+  onProgressChange
 }) => {
   const Icon = ICON_MAP[team.iconKey] || ICON_MAP['default'];
   const directors = team.members.filter(m => m.isDirector);
@@ -255,7 +257,10 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
               <span>进度</span>
               <span>{team.progress}%</span>
             </div>
-            <ProgressBar progress={team.progress} />
+            <ProgressBar 
+              progress={team.progress} 
+              onProgressChange={onProgressChange ? (progress) => onProgressChange(team.id, progress) : undefined}
+            />
           </div>
 
           {/* 待做 + 已完成：两列布局 */}

@@ -558,6 +558,32 @@ function App() {
     }
   }, [unlockedGroups, isAdminUnlocked, teams, customPrompt, customAlert]);
 
+  // 更新进度（无需密码保护）
+  const handleProgressChange = useCallback(async (groupId: string, newProgress: number) => {
+    // 确保进度在 0-100 范围内
+    const clampedProgress = Math.max(0, Math.min(100, newProgress));
+    
+    let updatedTeamToPersist: Team | null = null;
+    setTeams(prev => prev.map(t => {
+      if (t.id === groupId) {
+        const updated = { ...t, progress: clampedProgress };
+        if (!updatedTeamToPersist) updatedTeamToPersist = updated;
+        return updated;
+      }
+      return t;
+    }));
+
+    // 保存到 API
+    if (!useLocalStorage && updatedTeamToPersist) {
+      try {
+        await teamsAPI.update(updatedTeamToPersist);
+        console.log(`✅ 进度已更新: ${groupId} -> ${clampedProgress}%`);
+      } catch (err) {
+        console.error('进度更新失败:', err);
+      }
+    }
+  }, [useLocalStorage]);
+
   const handleGenerateReport = useCallback(() => {
     const date = new Date().toLocaleDateString();
     let report = `📢 【AIGC制作日报】 ${date}\n\n`;
@@ -1949,6 +1975,7 @@ function App() {
                 onAddDirectorProject={addDirectorProject}
                 onDeleteDirectorProject={deleteDirectorProject}
                 onToggleLock={toggleGroupLock}
+                onProgressChange={handleProgressChange}
               />
               </div>
             );
