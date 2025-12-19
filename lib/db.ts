@@ -52,26 +52,37 @@ export async function getTeams() {
   }
 }
 
-// 更新团队数据
+// 更新团队数据（支持新增和更新）
 export async function updateTeam(team: any) {
   try {
-    // 更新团队基本信息
+    // 使用 UPSERT：如果 id 存在则更新，不存在则插入
     await sql`
-      UPDATE teams SET
-        title = ${team.title},
-        icon_key = ${team.iconKey || team.icon_key || 'default'},
-        task = ${team.task || ''},
-        cycle = ${team.cycle || ''},
-        workload = ${team.workload || ''},
-        budget = ${team.budget || 0},
-        actual_cost = ${team.actualCost || team.actual_cost || 0},
-        progress = ${team.progress || 0},
-        status = ${team.status || 'normal'},
-        notes = ${team.notes || ''},
-        cover_image = ${team.coverImage || team.cover_image || ''},
-        images = ${JSON.stringify(team.images || [])},
-        links = ${JSON.stringify(team.links || [])}
-      WHERE id = ${team.id}
+      INSERT INTO teams (
+        id, title, icon_key, task, cycle, workload, 
+        budget, actual_cost, progress, status, notes, 
+        cover_image, images, links
+      ) VALUES (
+        ${team.id}, ${team.title}, ${team.iconKey || team.icon_key || 'default'}, ${team.task || ''}, 
+        ${team.cycle || ''}, ${team.workload || ''}, ${team.budget || 0}, 
+        ${team.actualCost || team.actual_cost || 0}, ${team.progress || 0}, 
+        ${team.status || 'normal'}, ${team.notes || ''}, 
+        ${team.coverImage || team.cover_image || ''}, 
+        ${JSON.stringify(team.images || [])}, ${JSON.stringify(team.links || [])}
+      )
+      ON CONFLICT (id) DO UPDATE SET
+        title = EXCLUDED.title,
+        icon_key = EXCLUDED.icon_key,
+        task = EXCLUDED.task,
+        cycle = EXCLUDED.cycle,
+        workload = EXCLUDED.workload,
+        budget = EXCLUDED.budget,
+        actual_cost = EXCLUDED.actual_cost,
+        progress = EXCLUDED.progress,
+        status = EXCLUDED.status,
+        notes = EXCLUDED.notes,
+        cover_image = EXCLUDED.cover_image,
+        images = EXCLUDED.images,
+        links = EXCLUDED.links
     `;
 
     // 删除旧的成员和 todos，重新插入
@@ -84,6 +95,12 @@ export async function updateTeam(team: any) {
         await sql`
           INSERT INTO members (id, team_id, name, is_director, avatar, role)
           VALUES (${member.id}, ${team.id}, ${member.name}, ${member.isDirector}, ${member.avatar || ''}, ${member.role})
+          ON CONFLICT (id) DO UPDATE SET
+            team_id = EXCLUDED.team_id,
+            name = EXCLUDED.name,
+            is_director = EXCLUDED.is_director,
+            avatar = EXCLUDED.avatar,
+            role = EXCLUDED.role
         `;
       }
     }
@@ -94,6 +111,10 @@ export async function updateTeam(team: any) {
         await sql`
           INSERT INTO todos (id, team_id, text, done)
           VALUES (${todo.id}, ${team.id}, ${todo.text}, ${todo.done})
+          ON CONFLICT (id) DO UPDATE SET
+            team_id = EXCLUDED.team_id,
+            text = EXCLUDED.text,
+            done = EXCLUDED.done
         `;
       }
     }
