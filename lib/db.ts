@@ -71,6 +71,12 @@ export async function updateTeam(team: any) {
     });
     
     // 使用 UPSERT：如果 id 存在则更新，不存在则插入
+    // 对于 JSONB 字段，直接传递数组/对象，让 PostgreSQL 自动转换
+    const imagesArray = team.images || [];
+    const linksArray = team.links || [];
+    const unfinishedWorksArray = unfinishedWorks;
+    const finishedWorksArray = finishedWorks;
+    
     const result = await sql`
       INSERT INTO teams (
         id, title, icon_key, task, cycle, workload, 
@@ -82,9 +88,10 @@ export async function updateTeam(team: any) {
         ${team.actualCost || team.actual_cost || 0}, ${team.progress || 0}, 
         ${team.status || 'normal'}, ${team.notes || ''}, 
         ${team.coverImage || team.cover_image || ''}, 
-        ${JSON.stringify(team.images || [])}, ${JSON.stringify(team.links || [])},
-        ${JSON.stringify(team.unfinishedWorks || team.unfinished_works || [])},
-        ${JSON.stringify(team.finishedWorks || team.finished_works || [])}
+        ${JSON.stringify(imagesArray)}::jsonb, 
+        ${JSON.stringify(linksArray)}::jsonb,
+        ${JSON.stringify(unfinishedWorksArray)}::jsonb,
+        ${JSON.stringify(finishedWorksArray)}::jsonb
       )
       ON CONFLICT (id) DO UPDATE SET
         title = EXCLUDED.title,
@@ -98,10 +105,10 @@ export async function updateTeam(team: any) {
         status = EXCLUDED.status,
         notes = EXCLUDED.notes,
         cover_image = EXCLUDED.cover_image,
-        images = EXCLUDED.images::jsonb,
-        links = EXCLUDED.links::jsonb,
-        unfinished_works = EXCLUDED.unfinished_works::jsonb,
-        finished_works = EXCLUDED.finished_works::jsonb,
+        images = EXCLUDED.images,
+        links = EXCLUDED.links,
+        unfinished_works = EXCLUDED.unfinished_works,
+        finished_works = EXCLUDED.finished_works,
         updated_at = CURRENT_TIMESTAMP
     `;
 
