@@ -412,8 +412,21 @@ function App() {
       setAnnouncement(announcementData);
       setUseLocalStorage(false);
       console.log('✅ 数据已从云端数据库加载');
-    } catch (error) {
-      console.warn('⚠️ API 加载失败，使用本地存储作为后备方案:', error);
+    } catch (error: any) {
+      console.error('⚠️ API 加载失败，使用本地存储作为后备方案');
+      console.error('错误类型:', error?.name || typeof error);
+      console.error('错误消息:', error?.message || String(error));
+      console.error('完整错误:', error);
+      
+      // 如果是网络错误或 CORS 错误，给用户更明确的提示
+      const errorMsg = error?.message || String(error);
+      if (errorMsg.includes('Failed to fetch') || errorMsg.includes('NetworkError') || errorMsg.includes('CORS')) {
+        console.error('💡 可能是网络连接问题或 CORS 配置问题，请检查：');
+        console.error('   - 网络连接是否正常');
+        console.error('   - API 端点是否正确（/api/teams, /api/announcement）');
+        console.error('   - Vercel 环境变量是否正确配置');
+      }
+      
       // 回退到 localStorage
       const savedData = localStorage.getItem(STORAGE_KEY);
       if (savedData) {
