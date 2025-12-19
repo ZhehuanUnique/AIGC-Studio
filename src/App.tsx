@@ -117,7 +117,8 @@ function App() {
   // 拖拽排序相关状态
   const [draggedTeamId, setDraggedTeamId] = useState<string | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
-  const scrollIntervalRef = useRef<number | null>(null);
+  const scrollAnimationRef = useRef<number | null>(null);
+  const lastClientYRef = useRef<number>(0);
   // 资源链接模块已从“部门管理”弹窗移除，相关 state 先移除
   const [newTaskText, setNewTaskText] = useState<string>('');
   const announcementTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1411,37 +1412,66 @@ function App() {
     setShowConsumptionModal(false);
   }, [currentGroupId, consumptionPlatform, consumptionPackage, consumptionCustomAmount, consumptionNote, teams, useLocalStorage, customAlert]);
 
-  // 自动滚动功能
-  const startAutoScroll = useCallback((direction: 'up' | 'down') => {
-    if (scrollIntervalRef.current) return;
+  // 自动滚动功能 - 使用 requestAnimationFrame 实现更平滑的滚动
+  const performAutoScroll = useCallback(() => {
+    const clientY = lastClientYRef.current;
+    const windowHeight = window.innerHeight;
+    const scrollThreshold = 120; // 距离顶部/底部多少像素时开始滚动
+    const maxScrollSpeed = 20; // 最大滚动速度（降低速度以减少卡顿）
     
-    const scrollSpeed = 15; // 滚动速度
-    scrollIntervalRef.current = window.setInterval(() => {
-      const scrollAmount = direction === 'up' ? -scrollSpeed : scrollSpeed;
-      window.scrollBy({ top: scrollAmount, behavior: 'auto' });
-    }, 16); // ~60fps
+    let scrollAmount = 0;
+    
+    if (clientY < scrollThreshold) {
+      // 向上滚动：根据距离顶部的距离计算速度，越靠近顶部滚动越快
+      // 使用平方函数使速度变化更平滑
+      const distance = Math.max(0, clientY);
+      const normalizedDistance = distance / scrollThreshold;
+      const speedFactor = 1 - (normalizedDistance * normalizedDistance);
+      scrollAmount = -maxScrollSpeed * Math.max(0.3, speedFactor); // 最小速度30%
+    } else if (clientY > windowHeight - scrollThreshold) {
+      // 向下滚动：根据距离底部的距离计算速度，越靠近底部滚动越快
+      const distance = Math.max(0, windowHeight - clientY);
+      const normalizedDistance = distance / scrollThreshold;
+      const speedFactor = 1 - (normalizedDistance * normalizedDistance);
+      scrollAmount = maxScrollSpeed * Math.max(0.3, speedFactor); // 最小速度30%
+    }
+    
+    if (Math.abs(scrollAmount) > 0.1) {
+      // 直接修改 scrollTop 以获得更流畅的滚动体验
+      const currentScroll = window.pageYOffset || document.documentElement.scrollTop;
+      window.scrollTo({
+        top: currentScroll + scrollAmount,
+        behavior: 'auto'
+      });
+      scrollAnimationRef.current = requestAnimationFrame(performAutoScroll);
+    } else {
+      scrollAnimationRef.current = null;
+    }
   }, []);
 
   const stopAutoScroll = useCallback(() => {
-    if (scrollIntervalRef.current) {
-      clearInterval(scrollIntervalRef.current);
-      scrollIntervalRef.current = null;
+    if (scrollAnimationRef.current !== null) {
+      cancelAnimationFrame(scrollAnimationRef.current);
+      scrollAnimationRef.current = null;
     }
   }, []);
 
   // 检查是否需要自动滚动
   const checkAutoScroll = useCallback((clientY: number) => {
-    const scrollThreshold = 100; // 距离顶部/底部多少像素时开始滚动
+    lastClientYRef.current = clientY;
     const windowHeight = window.innerHeight;
+    const scrollThreshold = 150;
     
-    if (clientY < scrollThreshold) {
-      startAutoScroll('up');
-    } else if (clientY > windowHeight - scrollThreshold) {
-      startAutoScroll('down');
+    if (clientY < scrollThreshold || clientY > windowHeight - scrollThreshold) {
+      // 如果还没有启动滚动动画，则启动
+      if (scrollAnimationRef.current === null) {
+        scrollAnimationRef.current = requestAnimationFrame(performAutoScroll);
+      }
     } else {
+      // 停止滚动
       stopAutoScroll();
     }
-  }, [startAutoScroll, stopAutoScroll]);
+  }, [performAutoScroll, stopAutoScroll]);
 
   // 拖拽排序功能
   const handleDragStart = useCallback((e: React.DragEvent, teamId: string) => {
@@ -1508,11 +1538,11 @@ function App() {
     setDragOverIndex(null);
   }, [draggedTeamId, teams, announcement, useLocalStorage, stopAutoScroll]);
 
-  // 清理自动滚动定时器
+  // 清理自动滚动动画
   useEffect(() => {
     return () => {
-      if (scrollIntervalRef.current) {
-        clearInterval(scrollIntervalRef.current);
+      if (scrollAnimationRef.current !== null) {
+        cancelAnimationFrame(scrollAnimationRef.current);
       }
     };
   }, []);
@@ -1869,10 +1899,10 @@ function App() {
                 onDragLeave={handleDragLeave}
                 onDragEnd={handleDragEnd}
                 onDrop={(e) => handleDrop(e, index)}
-                className={`relative transition-all duration-200 ease-out ${
+                className={`relative transition-all duration-150 ease-out ${
                   isDragged 
-                    ? 'opacity-40 scale-95' 
-                    : 'opacity-100 scale-100'
+                    ? 'opacity-30 scale-[0.98] z-50' 
+                    : 'opacity-100 scale-100 z-auto'
                 } ${
                   isDragOver 
                     ? 'border-t-2 border-sky-500 -mt-2' 
@@ -1880,6 +1910,7 @@ function App() {
                 }`}
                 style={{
                   transform: transformY !== 0 ? `translateY(${transformY * 8}px)` : undefined,
+                  willChange: isDragged || transformY !== 0 ? 'transform, opacity' : 'auto',
                 }}
               >
               {isAdminUnlocked && (
