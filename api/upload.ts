@@ -30,10 +30,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
+    // 确保环境变量存在
+    const token = process.env.BLOB_READ_WRITE_TOKEN;
+    if (!token) {
+      return res.status(500).json({ 
+        success: false, 
+        message: 'BLOB_READ_WRITE_TOKEN 未配置' 
+      });
+    }
+
     const json = await handleUpload({
       request: req,
       body: req.body,
-      onBeforeGenerateToken: async (pathname: string) => {
+      onBeforeGenerateToken: async (pathname: string, clientPayload?: string) => {
+        console.log('生成 token for:', pathname);
         // 只允许图片
         return {
           allowedContentTypes: [
@@ -45,8 +55,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           tokenPayload: JSON.stringify({ pathname }),
         };
       },
-      onUploadCompleted: async () => {
-        // 这里可以做日志/回调（可选）
+      onUploadCompleted: async ({ blob, tokenPayload }) => {
+        console.log('上传完成:', blob.url);
       },
     });
 
@@ -56,12 +66,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.error('错误详情:', {
       message: error?.message,
       name: error?.name,
-      stack: error?.stack
+      stack: error?.stack,
+      tokenExists: !!process.env.BLOB_READ_WRITE_TOKEN
     });
     return res.status(500).json({ 
       success: false, 
       message: error?.message || '上传初始化失败',
-      error: process.env.NODE_ENV === 'development' ? error?.stack : undefined
+      details: error?.message
     });
   }
 }
