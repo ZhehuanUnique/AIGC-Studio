@@ -125,3 +125,14 @@ export const saveAllData = async (teams: any[], announcement: string) => {
   }
 };
 
+// 数据库迁移 API
+export const migrateAPI = {
+  // 执行数据库迁移
+  run: async () => {
+    const result = await fetchAPI('/migrate', {
+      method: 'POST',
+    });
+    return result;
+  },
+};
+

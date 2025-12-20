@@ -1336,9 +1336,29 @@ function App() {
         } catch (err: any) {
           console.error('❌ 上传失败:', err);
           const errorMsg = err?.message || '未知错误';
-          // 如果错误提示缺少字段，说明数据库需要迁移
+          // 如果错误提示缺少字段，说明数据库需要迁移，自动执行迁移
           if (errorMsg.includes('unfinished_works') || errorMsg.includes('finished_works') || errorMsg.includes('column') || errorMsg.includes('不存在')) {
-            customAlert('⚠️ 数据库需要更新，请联系管理员执行迁移脚本：lib/migration-add-works.sql');
+            try {
+              console.log('🔄 检测到数据库需要迁移，自动执行迁移...');
+              const { migrateAPI } = await import('./utils/api');
+              const migrateResult = await migrateAPI.run();
+              if (migrateResult.success) {
+                console.log('✅ 数据库迁移成功，重试保存...');
+                // 迁移成功后，重试保存
+                try {
+                  await teamsAPI.update(updatedTeam);
+                  customAlert('✅ 作品上传成功！（数据库已自动迁移）');
+                } catch (retryErr: any) {
+                  console.error('重试保存失败:', retryErr);
+                  customAlert('⚠️ 数据库迁移成功，但保存失败：' + (retryErr?.message || '未知错误'));
+                }
+              } else {
+                customAlert('⚠️ 数据库迁移失败，请联系管理员：' + (migrateResult.message || '未知错误'));
+              }
+            } catch (migrateErr: any) {
+              console.error('迁移失败:', migrateErr);
+              customAlert('⚠️ 数据库需要更新，自动迁移失败，请联系管理员执行迁移脚本：lib/migration-add-works.sql');
+            }
           } else {
             customAlert('⚠️ 作品已在本地保存，但同步到服务器失败：' + errorMsg);
           }
@@ -1387,7 +1407,27 @@ function App() {
         console.error('删除失败:', err);
         const errorMsg = err?.message || '未知错误';
         if (errorMsg.includes('unfinished_works') || errorMsg.includes('finished_works') || errorMsg.includes('column') || errorMsg.includes('不存在')) {
-          customAlert('⚠️ 数据库需要更新，请联系管理员执行迁移脚本：lib/migration-add-works.sql');
+          try {
+            console.log('🔄 检测到数据库需要迁移，自动执行迁移...');
+            const { migrateAPI } = await import('./utils/api');
+            const migrateResult = await migrateAPI.run();
+            if (migrateResult.success) {
+              console.log('✅ 数据库迁移成功，重试删除...');
+              // 迁移成功后，重试删除
+              try {
+                await teamsAPI.update(updatedTeam);
+                customAlert('✅ 作品已删除！（数据库已自动迁移）');
+              } catch (retryErr: any) {
+                console.error('重试删除失败:', retryErr);
+                customAlert('⚠️ 数据库迁移成功，但删除失败：' + (retryErr?.message || '未知错误'));
+              }
+            } else {
+              customAlert('⚠️ 数据库迁移失败，请联系管理员：' + (migrateResult.message || '未知错误'));
+            }
+          } catch (migrateErr: any) {
+            console.error('迁移失败:', migrateErr);
+            customAlert('⚠️ 数据库需要更新，自动迁移失败，请联系管理员执行迁移脚本：lib/migration-add-works.sql');
+          }
         } else {
           customAlert('⚠️ 作品已在本地删除，但同步到服务器失败：' + errorMsg);
         }
