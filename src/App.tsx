@@ -3,7 +3,7 @@ import {
   Search, Plus, Trash2, X, Image as ImageIcon, Save, RefreshCw, Upload,
   CheckCircle, CheckSquare, ListTodo, Square,
   Download, FileJson, ClipboardList, Unlock,
-  Wrench, Megaphone, GripVertical
+  Wrench, Megaphone, GripVertical, Home
 } from 'lucide-react';
 import { Team, Member, Todo, ResourceLink, ConsumptionRecord } from './types';
 import { 
@@ -1983,6 +1983,14 @@ function App() {
 
         {/* 快捷入口 */}
         <div className="mb-10 flex flex-wrap items-center gap-3">
+          <a
+            href="https://aigc-jubianage.vercel.app/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-slate-600 text-slate-200 px-3 py-2 rounded-lg font-bold text-xs transition-all"
+          >
+            <Home size={12} /> 首页
+          </a>
           <a
             href="/juchacha.html"
             className="flex items-center gap-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white px-3 py-2 rounded-lg font-bold text-xs transition-all shadow-lg shadow-emerald-900/20"
