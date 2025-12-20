@@ -1826,7 +1826,7 @@ function App() {
               使用指南
             </a>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1.5 sm:gap-2 md:gap-4 flex-wrap justify-end max-w-full">
             {/* 主题切换按钮 */}
             <div className="hidden lg:flex items-center gap-1 bg-slate-900 border border-slate-800 rounded-lg p-1">
               {(['dark', 'blue', 'white', 'green'] as const).map((t) => (
@@ -1871,50 +1871,50 @@ function App() {
             </div>
 
             {isAdminUnlocked && (
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-600/90 text-white border border-emerald-500/50">
+              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-600/90 text-white border border-emerald-500/50">
                 <Unlock size={14} />
                 <span>管理员模式</span>
               </div>
             )}
             {isAdminUnlocked && (
-              <div className="flex items-center gap-1 bg-slate-900 border border-slate-800 rounded-lg p-1">
+              <div className="flex items-center gap-1 bg-slate-900 border border-slate-800 rounded-lg p-0.5 sm:p-1">
                 <button
                   onClick={handleGenerateReport}
                   title="生成日报"
-                  className="p-1.5 text-blue-400 hover:text-white hover:bg-blue-600 rounded transition-colors"
+                  className="p-1 sm:p-1.5 text-blue-400 hover:text-white hover:bg-blue-600 rounded transition-colors"
                 >
-                  <ClipboardList size={14} />
+                  <ClipboardList size={12} className="sm:w-[14px] sm:h-[14px]" />
                 </button>
-                <div className="w-px h-4 bg-slate-700"></div>
+                <div className="w-px h-3 sm:h-4 bg-slate-700"></div>
                 <button
                   onClick={handleSavePage}
                   title="保存为分享网页"
-                  className="flex items-center gap-1 bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded text-xs font-bold transition-colors ml-1 shadow-lg shadow-blue-900/30"
+                  className="flex items-center gap-0.5 sm:gap-1 bg-blue-600 hover:bg-blue-500 text-white px-2 py-1 sm:px-3 sm:py-1.5 rounded text-[10px] sm:text-xs font-bold transition-colors ml-0.5 sm:ml-1 shadow-lg shadow-blue-900/30"
                 >
-                  <Save size={14} />
-                  <span>保存设置</span>
+                  <Save size={12} className="sm:w-[14px] sm:h-[14px]" />
+                  <span className="hidden xs:inline">保存设置</span>
                 </button>
-                <div className="w-px h-4 bg-slate-700 ml-1"></div>
+                <div className="w-px h-3 sm:h-4 bg-slate-700 ml-0.5 sm:ml-1"></div>
                 <button
                   onClick={handleExportData}
                   title="备份数据"
-                  className="p-1.5 text-sky-400 hover:text-white hover:bg-sky-600 rounded transition-colors"
+                  className="p-1 sm:p-1.5 text-sky-400 hover:text-white hover:bg-sky-600 rounded transition-colors"
                 >
-                  <Download size={14} />
+                  <Download size={12} className="sm:w-[14px] sm:h-[14px]" />
                 </button>
                 <button
                   onClick={triggerImport}
                   title="恢复数据"
-                  className="p-1.5 text-emerald-400 hover:text-white hover:bg-emerald-600 rounded transition-colors"
+                  className="p-1 sm:p-1.5 text-emerald-400 hover:text-white hover:bg-emerald-600 rounded transition-colors"
                 >
-                  <FileJson size={14} />
+                  <FileJson size={12} className="sm:w-[14px] sm:h-[14px]" />
                 </button>
                 <button
                   onClick={handleReset}
                   title="重置"
-                  className="p-1.5 text-red-400 hover:text-white hover:bg-red-600 rounded transition-colors"
+                  className="p-1 sm:p-1.5 text-red-400 hover:text-white hover:bg-red-600 rounded transition-colors"
                 >
-                  <RefreshCw size={14} />
+                  <RefreshCw size={12} className="sm:w-[14px] sm:h-[14px]" />
                 </button>
                 <input
                   type="file"

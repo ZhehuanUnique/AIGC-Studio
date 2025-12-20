@@ -156,14 +156,14 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
       {/* 锁按钮 - 右上角 */}
       <button
         onClick={() => onToggleLock(team)}
-        className={`absolute top-4 right-4 z-20 flex flex-col items-center gap-1 px-3 py-2 rounded-lg font-bold transition-all ${
+        className={`absolute top-2 right-2 sm:top-4 sm:right-4 z-20 flex flex-col items-center gap-0.5 sm:gap-1 px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg font-bold transition-all ${
           isUnlocked
             ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20'
             : 'bg-slate-800 text-slate-400 border border-slate-700 hover:border-slate-600 hover:text-slate-300'
         }`}
       >
-        {isUnlocked ? <Unlock size={16} /> : <Lock size={16} />}
-        <div className="text-[8px] leading-tight">
+        {isUnlocked ? <Unlock size={14} className="sm:w-4 sm:h-4" /> : <Lock size={14} className="sm:w-4 sm:h-4" />}
+        <div className="text-[7px] sm:text-[8px] leading-tight">
           <div>UPDATE</div>
           <div>更新</div>
         </div>
