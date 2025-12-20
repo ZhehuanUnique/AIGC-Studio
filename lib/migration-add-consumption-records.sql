@@ -5,3 +5,4 @@ ALTER TABLE teams
 ADD COLUMN IF NOT EXISTS consumption_records JSONB DEFAULT '[]';
 
 
+

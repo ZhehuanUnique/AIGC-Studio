@@ -1991,7 +1991,8 @@ function App() {
           >
             <Home size={12} /> 首页
           </a>
-          <a
+          {/* 暂时隐藏 */}
+          {/* <a
             href="/juchacha.html"
             className="flex items-center gap-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white px-3 py-2 rounded-lg font-bold text-xs transition-all shadow-lg shadow-emerald-900/20"
           >
@@ -2002,7 +2003,7 @@ function App() {
             className="flex items-center gap-1 bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 text-slate-200 px-3 py-2 rounded-lg font-bold text-xs transition-all"
           >
             <Square size={12} /> 作品展示
-          </a>
+          </a> */}
         </div>
 
         <div className="mb-10 flex justify-center">
