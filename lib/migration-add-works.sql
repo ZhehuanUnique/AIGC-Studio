@@ -6,3 +6,4 @@ ALTER TABLE teams
 ADD COLUMN IF NOT EXISTS unfinished_works JSONB DEFAULT '[]',
 ADD COLUMN IF NOT EXISTS finished_works JSONB DEFAULT '[]';
 
+

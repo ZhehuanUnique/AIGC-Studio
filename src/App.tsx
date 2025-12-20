@@ -402,6 +402,13 @@ function App() {
   }, []);
 
   const loadData = async () => {
+    // 检测是否为生产环境
+    const isProduction = typeof window !== 'undefined' && (
+      window.location.hostname === 'www.jubianstudio.cn' ||
+      window.location.hostname === 'jubianstudio.cn' ||
+      window.location.hostname.includes('vercel.app')
+    );
+    
     try {
       setLoading(true);
       // 尝试从 API 加载数据
@@ -436,7 +443,7 @@ function App() {
         }
       });
     } catch (error: any) {
-      console.error('⚠️ API 加载失败，使用本地存储作为后备方案');
+      console.error('⚠️ API 加载失败');
       console.error('错误类型:', error?.name || typeof error);
       console.error('错误消息:', error?.message || String(error));
       console.error('完整错误:', error);
@@ -450,30 +457,61 @@ function App() {
         console.error('   - Vercel 环境变量是否正确配置');
       }
       
-      // 回退到 localStorage
-      const savedData = localStorage.getItem(STORAGE_KEY);
-      if (savedData) {
-        try {
-          const parsed = JSON.parse(savedData);
-          if (parsed.teams) {
-            // 同样合并密码字段
-            const teamsWithPasswords = parsed.teams.map((raw: any) => {
-              const team = normalizeTeam(raw);
-              const initialTeam = INITIAL_TEAMS.find(t => t.id === team.id);
-              return {
-                ...team,
-                password: team.password || initialTeam?.password || '0000',
-                consumptionRecords: team.consumptionRecords || []
-              };
-            });
-            setTeams(teamsWithPasswords);
+      // 生产环境：强制使用云端数据库，不回退到本地模式
+      if (isProduction) {
+        console.warn('🌐 生产环境：强制使用云端数据库模式，即使 API 失败也不回退到本地存储');
+        setUseLocalStorage(false);
+        // 尝试从 localStorage 加载数据作为临时显示，但仍保持云端模式
+        const savedData = localStorage.getItem(STORAGE_KEY);
+        if (savedData) {
+          try {
+            const parsed = JSON.parse(savedData);
+            if (parsed.teams) {
+              // 同样合并密码字段
+              const teamsWithPasswords = parsed.teams.map((raw: any) => {
+                const team = normalizeTeam(raw);
+                const initialTeam = INITIAL_TEAMS.find(t => t.id === team.id);
+                return {
+                  ...team,
+                  password: team.password || initialTeam?.password || '0000',
+                  consumptionRecords: team.consumptionRecords || []
+                };
+              });
+              setTeams(teamsWithPasswords);
+              console.log('📦 已从本地缓存加载数据（仅用于显示），但保存操作仍会尝试同步到云端');
+            }
+            if (parsed.announcement) setAnnouncement(parsed.announcement);
+          } catch (e) {
+            console.error('localStorage 解析失败:', e);
           }
-          if (parsed.announcement) setAnnouncement(parsed.announcement);
-        } catch (e) {
-          console.error('localStorage 解析失败:', e);
         }
+      } else {
+        // 开发环境：回退到 localStorage
+        console.warn('💻 开发环境：API 失败，回退到本地存储模式');
+        const savedData = localStorage.getItem(STORAGE_KEY);
+        if (savedData) {
+          try {
+            const parsed = JSON.parse(savedData);
+            if (parsed.teams) {
+              // 同样合并密码字段
+              const teamsWithPasswords = parsed.teams.map((raw: any) => {
+                const team = normalizeTeam(raw);
+                const initialTeam = INITIAL_TEAMS.find(t => t.id === team.id);
+                return {
+                  ...team,
+                  password: team.password || initialTeam?.password || '0000',
+                  consumptionRecords: team.consumptionRecords || []
+                };
+              });
+              setTeams(teamsWithPasswords);
+            }
+            if (parsed.announcement) setAnnouncement(parsed.announcement);
+          } catch (e) {
+            console.error('localStorage 解析失败:', e);
+          }
+        }
+        setUseLocalStorage(true);
       }
-      setUseLocalStorage(true);
     } finally {
       setLoading(false);
     }
