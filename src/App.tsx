@@ -90,11 +90,33 @@ function App() {
           : (() => {
             try { return JSON.parse(team.consumption_records || '[]'); } catch { return []; }
           })()),
-      unfinishedWorks: Array.isArray(team.unfinishedWorks) ? team.unfinishedWorks : (() => {
-        try { return JSON.parse(team.unfinished_works || team.unfinishedWorks || '[]'); } catch { return []; }
+      unfinishedWorks: (() => {
+        // 优先使用已有的数组
+        if (Array.isArray(team.unfinishedWorks)) return team.unfinishedWorks;
+        // 尝试从 snake_case 字段获取
+        if (Array.isArray(team.unfinished_works)) return team.unfinished_works;
+        // 如果是字符串，尝试解析
+        if (typeof team.unfinished_works === 'string') {
+          try { return JSON.parse(team.unfinished_works || '[]'); } catch { return []; }
+        }
+        if (typeof team.unfinishedWorks === 'string') {
+          try { return JSON.parse(team.unfinishedWorks || '[]'); } catch { return []; }
+        }
+        return [];
       })(),
-      finishedWorks: Array.isArray(team.finishedWorks) ? team.finishedWorks : (() => {
-        try { return JSON.parse(team.finished_works || team.finishedWorks || '[]'); } catch { return []; }
+      finishedWorks: (() => {
+        // 优先使用已有的数组
+        if (Array.isArray(team.finishedWorks)) return team.finishedWorks;
+        // 尝试从 snake_case 字段获取
+        if (Array.isArray(team.finished_works)) return team.finished_works;
+        // 如果是字符串，尝试解析
+        if (typeof team.finished_works === 'string') {
+          try { return JSON.parse(team.finished_works || '[]'); } catch { return []; }
+        }
+        if (typeof team.finishedWorks === 'string') {
+          try { return JSON.parse(team.finishedWorks || '[]'); } catch { return []; }
+        }
+        return [];
       })()
     } as Team;
   }, []);
@@ -419,6 +441,16 @@ function App() {
       
       // 合并密码字段 - 确保每个组都有密码
       const teamsWithPasswords = teamsData.map((raw: any) => {
+        // 调试：打印原始数据
+        if ((raw.unfinished_works && (Array.isArray(raw.unfinished_works) ? raw.unfinished_works.length > 0 : true)) ||
+            (raw.finished_works && (Array.isArray(raw.finished_works) ? raw.finished_works.length > 0 : true))) {
+          console.log(`🔍 原始数据 - 团队 ${raw.id}:`, {
+            unfinished_works: raw.unfinished_works,
+            finished_works: raw.finished_works,
+            unfinished_works_type: typeof raw.unfinished_works,
+            finished_works_type: typeof raw.finished_works
+          });
+        }
         const team = normalizeTeam(raw);
         const initialTeam = INITIAL_TEAMS.find(t => t.id === team.id);
         return {
@@ -436,9 +468,11 @@ function App() {
       teamsWithPasswords.forEach((team: Team) => {
         if ((team.unfinishedWorks && team.unfinishedWorks.length > 0) || 
             (team.finishedWorks && team.finishedWorks.length > 0)) {
-          console.log(`📥 加载团队 ${team.id} 的作品:`, {
+          console.log(`📥 加载团队 ${team.id} 的作品（规范化后）:`, {
             unfinished: team.unfinishedWorks?.length || 0,
-            finished: team.finishedWorks?.length || 0
+            finished: team.finishedWorks?.length || 0,
+            unfinishedWorks: team.unfinishedWorks,
+            finishedWorks: team.finishedWorks
           });
         }
       });
