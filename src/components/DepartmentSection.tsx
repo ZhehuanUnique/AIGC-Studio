@@ -169,7 +169,7 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
         </div>
       </button>
 
-      <div className="flex flex-col lg:flex-row lg:items-center gap-4 sm:gap-6 mb-8 relative z-10 pr-11 sm:pr-0">
+      <div className="flex flex-col lg:flex-row lg:items-center gap-4 sm:gap-6 mb-8 relative z-10">
         <div className="flex items-center gap-4 min-w-[240px]">
           <div
             onClick={() => isUnlocked && onEditGroup(team)}
