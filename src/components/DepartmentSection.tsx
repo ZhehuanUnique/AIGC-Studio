@@ -180,8 +180,8 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
             <Icon size={24} strokeWidth={1.5} />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-              <h2 className="text-xl sm:text-2xl font-bold text-slate-200 tracking-tight hover:text-white transition-colors break-words">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-200 tracking-tight hover:text-white transition-colors break-words flex-shrink">
                 {team.title}
               </h2>
               <div className="flex items-center gap-2 flex-shrink-0">
