@@ -153,23 +153,23 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
         0{index + 1}
       </div>
       
-      {/* 锁按钮 - 右上角 */}
+      {/* 锁按钮 - 右上角（桌面端显示） */}
       <button
         onClick={() => onToggleLock(team)}
-        className={`absolute top-1.5 right-1.5 sm:top-4 sm:right-4 z-20 flex flex-col items-center gap-0.5 sm:gap-1 px-1.5 py-1 sm:px-3 sm:py-2 rounded-lg font-bold transition-all ${
+        className={`hidden sm:flex absolute top-4 right-4 z-20 flex-col items-center gap-1 px-3 py-2 rounded-lg font-bold transition-all ${
           isUnlocked
             ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20'
             : 'bg-slate-800 text-slate-400 border border-slate-700 hover:border-slate-600 hover:text-slate-300'
         }`}
       >
-        {isUnlocked ? <Unlock size={12} className="sm:w-4 sm:h-4" /> : <Lock size={12} className="sm:w-4 sm:h-4" />}
-        <div className="text-[6px] sm:text-[8px] leading-tight">
+        {isUnlocked ? <Unlock size={16} /> : <Lock size={16} />}
+        <div className="text-[8px] leading-tight">
           <div>UPDATE</div>
           <div>更新</div>
         </div>
       </button>
 
-      <div className="flex flex-col lg:flex-row lg:items-center gap-4 sm:gap-6 mb-8 relative z-10 pr-11 sm:pr-0">
+      <div className="flex flex-col lg:flex-row lg:items-center gap-4 sm:gap-6 mb-8 relative z-10">
         <div className="flex items-center gap-4 min-w-[240px]">
           <div
             onClick={() => isUnlocked && onEditGroup(team)}
@@ -876,6 +876,19 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
           </div>
         </div>
       </div>
+      
+      {/* 锁按钮 - 底部（移动端显示） */}
+      <button
+        onClick={() => onToggleLock(team)}
+        className={`sm:hidden w-full mt-4 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-bold transition-all ${
+          isUnlocked
+            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20'
+            : 'bg-slate-800 text-slate-400 border border-slate-700 hover:border-slate-600 hover:text-slate-300'
+        }`}
+      >
+        {isUnlocked ? <Unlock size={16} /> : <Lock size={16} />}
+        <span className="text-sm">UPDATE 更新</span>
+      </button>
       </div>
     </div>
   );
