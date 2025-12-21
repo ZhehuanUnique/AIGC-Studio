@@ -8,20 +8,13 @@ const API_BASE = '/api';
 // 通用请求函数
 async function fetchAPI(endpoint: string, options: RequestInit = {}) {
   try {
-    // 添加超时控制（10秒）
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
-    
     const response = await fetch(`${API_BASE}${endpoint}`, {
       ...options,
-      signal: controller.signal,
       headers: {
         'Content-Type': 'application/json',
         ...options.headers,
       },
     });
-    
-    clearTimeout(timeoutId);
 
     // 注意：后端可能返回非 JSON（例如 413 Request Entity Too Large 的 HTML/纯文本），不能直接 response.json()
     const rawText = await response.text();
@@ -37,12 +30,8 @@ async function fetchAPI(endpoint: string, options: RequestInit = {}) {
     }
 
     return data;
-  } catch (error: any) {
+  } catch (error) {
     console.error('API 请求错误:', error);
-    // 如果是超时错误，提供更友好的错误信息
-    if (error.name === 'AbortError') {
-      throw new Error('请求超时，请检查网络连接');
-    }
     throw error;
   }
 }
