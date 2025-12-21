@@ -500,24 +500,38 @@ function App() {
         if (savedData) {
           try {
             const parsed = JSON.parse(savedData);
-            if (parsed.teams) {
+            if (parsed.teams && Array.isArray(parsed.teams)) {
               // 同样合并密码字段
               const teamsWithPasswords = parsed.teams.map((raw: any) => {
-                const team = normalizeTeam(raw);
-                const initialTeam = INITIAL_TEAMS.find(t => t.id === team.id);
-                return {
-                  ...team,
-                  password: team.password || initialTeam?.password || '0000',
-                  consumptionRecords: team.consumptionRecords || []
-                };
+                try {
+                  const team = normalizeTeam(raw);
+                  const initialTeam = INITIAL_TEAMS.find(t => t.id === team.id);
+                  return {
+                    ...team,
+                    password: team.password || initialTeam?.password || '0000',
+                    consumptionRecords: team.consumptionRecords || []
+                  };
+                } catch (e) {
+                  console.error(`规范化团队失败:`, e);
+                  const initialTeam = INITIAL_TEAMS.find(t => t.id === raw?.id);
+                  return initialTeam || INITIAL_TEAMS[0];
+                }
               });
               setTeams(teamsWithPasswords);
               console.log('📦 已从本地缓存加载数据（仅用于显示），但保存操作仍会尝试同步到云端');
+            } else {
+              // 如果localStorage数据无效，使用初始数据
+              setTeams(INITIAL_TEAMS);
             }
             if (parsed.announcement) setAnnouncement(parsed.announcement);
           } catch (e) {
             console.error('localStorage 解析失败:', e);
+            // 如果解析失败，使用初始数据
+            setTeams(INITIAL_TEAMS);
           }
+        } else {
+          // 如果没有localStorage数据，使用初始数据
+          setTeams(INITIAL_TEAMS);
         }
       } else {
         // 开发环境：回退到 localStorage
@@ -526,23 +540,37 @@ function App() {
         if (savedData) {
           try {
             const parsed = JSON.parse(savedData);
-            if (parsed.teams) {
+            if (parsed.teams && Array.isArray(parsed.teams)) {
               // 同样合并密码字段
               const teamsWithPasswords = parsed.teams.map((raw: any) => {
-                const team = normalizeTeam(raw);
-                const initialTeam = INITIAL_TEAMS.find(t => t.id === team.id);
-                return {
-                  ...team,
-                  password: team.password || initialTeam?.password || '0000',
-                  consumptionRecords: team.consumptionRecords || []
-                };
+                try {
+                  const team = normalizeTeam(raw);
+                  const initialTeam = INITIAL_TEAMS.find(t => t.id === team.id);
+                  return {
+                    ...team,
+                    password: team.password || initialTeam?.password || '0000',
+                    consumptionRecords: team.consumptionRecords || []
+                  };
+                } catch (e) {
+                  console.error(`规范化团队失败:`, e);
+                  const initialTeam = INITIAL_TEAMS.find(t => t.id === raw?.id);
+                  return initialTeam || INITIAL_TEAMS[0];
+                }
               });
               setTeams(teamsWithPasswords);
+            } else {
+              // 如果localStorage数据无效，使用初始数据
+              setTeams(INITIAL_TEAMS);
             }
             if (parsed.announcement) setAnnouncement(parsed.announcement);
           } catch (e) {
             console.error('localStorage 解析失败:', e);
+            // 如果解析失败，使用初始数据
+            setTeams(INITIAL_TEAMS);
           }
+        } else {
+          // 如果没有localStorage数据，使用初始数据
+          setTeams(INITIAL_TEAMS);
         }
         setUseLocalStorage(true);
       }
