@@ -148,7 +148,7 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
   return (
     <div className={`mb-8 ${currentTheme.card} border ${
       team.status === 'urgent' ? 'border-red-900/30' : currentTheme.border
-    } rounded-2xl p-6 relative overflow-hidden animate-in fade-in slide-in-from-bottom-8 duration-700 transition-colors`}>
+    } rounded-2xl p-4 sm:p-6 relative overflow-hidden animate-in fade-in slide-in-from-bottom-8 duration-700 transition-colors`}>
       <div className="absolute -top-6 -right-6 text-9xl font-black text-slate-800/20 pointer-events-none select-none">
         0{index + 1}
       </div>
@@ -156,20 +156,20 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
       {/* 锁按钮 - 右上角 */}
       <button
         onClick={() => onToggleLock(team)}
-        className={`absolute top-2 right-2 sm:top-4 sm:right-4 z-20 flex flex-col items-center gap-0.5 sm:gap-1 px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg font-bold transition-all ${
+        className={`absolute top-1.5 right-1.5 sm:top-4 sm:right-4 z-20 flex flex-col items-center gap-0.5 sm:gap-1 px-1.5 py-1 sm:px-3 sm:py-2 rounded-lg font-bold transition-all ${
           isUnlocked
             ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20'
             : 'bg-slate-800 text-slate-400 border border-slate-700 hover:border-slate-600 hover:text-slate-300'
         }`}
       >
-        {isUnlocked ? <Unlock size={14} className="sm:w-4 sm:h-4" /> : <Lock size={14} className="sm:w-4 sm:h-4" />}
-        <div className="text-[7px] sm:text-[8px] leading-tight">
+        {isUnlocked ? <Unlock size={12} className="sm:w-4 sm:h-4" /> : <Lock size={12} className="sm:w-4 sm:h-4" />}
+        <div className="text-[6px] sm:text-[8px] leading-tight">
           <div>UPDATE</div>
           <div>更新</div>
         </div>
       </button>
 
-      <div className="flex flex-col lg:flex-row lg:items-center gap-6 mb-8 relative z-10">
+      <div className="flex flex-col lg:flex-row lg:items-center gap-4 sm:gap-6 mb-8 relative z-10 pr-11 sm:pr-0">
         <div className="flex items-center gap-4 min-w-[240px]">
           <div
             onClick={() => isUnlocked && onEditGroup(team)}
@@ -179,30 +179,32 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
           >
             <Icon size={24} strokeWidth={1.5} />
           </div>
-          <div>
-            <div className="flex items-center gap-3">
-              <h2 className="text-2xl font-bold text-slate-200 tracking-tight hover:text-white transition-colors">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-200 tracking-tight hover:text-white transition-colors break-words">
                 {team.title}
               </h2>
-              <StatusBadge status={team.status || 'normal'} />
-              {isUnlocked && (
-                <button onClick={() => onEditGroup(team)}>
-                  <Edit2 size={14} className="text-slate-500 hover:text-sky-500 transition-colors" />
-                </button>
-              )}
-              {isEditing && onDeleteGroup && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDeleteGroup(team.id, team.title);
-                  }}
-                  className="text-red-500/70 hover:text-red-400 hover:bg-red-500/10 rounded p-1 transition-colors"
-                  title="删除该组"
-                >
-                  <Trash2 size={14} />
-                </button>
-              )}
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <StatusBadge status={team.status || 'normal'} />
+                {isUnlocked && (
+                  <button onClick={() => onEditGroup(team)}>
+                    <Edit2 size={14} className="text-slate-500 hover:text-sky-500 transition-colors" />
+                  </button>
+                )}
+                {isEditing && onDeleteGroup && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDeleteGroup(team.id, team.title);
+                    }}
+                    className="text-red-500/70 hover:text-red-400 hover:bg-red-500/10 rounded p-1 transition-colors"
+                    title="删除该组"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                )}
+              </div>
             </div>
             <div className="text-xs font-mono text-slate-500 tracking-wider mt-1 uppercase flex items-center gap-2">
               <span>SIZE: {team.members.length}</span>
