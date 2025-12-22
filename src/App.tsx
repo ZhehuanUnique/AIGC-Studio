@@ -14,7 +14,7 @@ import { Modal } from './components/Modal';
 import { InputField } from './components/InputField';
 import { DepartmentSection } from './components/DepartmentSection';
 import { teamsAPI, announcementAPI } from './utils/api';
-import { uploadFile } from './utils/upload';
+import { upload } from '@vercel/blob/client';
 
 interface EditingMember extends Member {
   currentGroupId?: string;
@@ -256,9 +256,9 @@ function App() {
   }, [customConfirm, useLocalStorage]);
 
   const isDataUrl = (value?: string) => typeof value === 'string' && value.startsWith('data:');
-  const isSupabaseUrl = (value?: string) =>
+  const isVercelBlobUrl = (value?: string) =>
     typeof value === 'string' &&
-    (value.includes('supabase.co/storage') || value.includes('supabase.com/storage'));
+    (value.includes('.blob.vercel-storage.com') || value.includes('vercel-storage.com') || value.includes('blob.vercel.com'));
 
   const uniqueUploadName = (originalName: string, prefix: string) => {
     const safe = (originalName || 'file').replace(/[^\w.\-]+/g, '_');
@@ -266,7 +266,7 @@ function App() {
   };
 
   const deleteBlobByUrl = useCallback(async (url?: string) => {
-    if (!isSupabaseUrl(url)) return;
+    if (!isVercelBlobUrl(url)) return;
     try {
       await fetch('/api/blob-delete', {
         method: 'POST',
@@ -275,7 +275,7 @@ function App() {
       });
     } catch (e) {
       // 不阻塞主流程：删除失败最多浪费一点存储
-      console.warn('旧文件删除失败（可忽略）:', e);
+      console.warn('旧 Blob 删除失败（可忽略）:', e);
     }
   }, []);
 
@@ -390,7 +390,10 @@ function App() {
     let images = team.images || [];
 
     if (isDataUrl(coverImage)) {
-      const blobObj = await uploadFile(dataUrlToBlob(coverImage as string), 'covers');
+      const blobObj = await upload(`cover-${team.id}-${Date.now()}.png`, dataUrlToBlob(coverImage as string), {
+        access: 'public',
+        handleUploadUrl: '/api/upload',
+      });
       coverImage = blobObj.url;
       changed = true;
     }
@@ -399,7 +402,10 @@ function App() {
     for (let i = 0; i < images.length; i++) {
       const img = images[i];
       if (isDataUrl(img)) {
-        const blobObj = await uploadFile(dataUrlToBlob(img), 'gallery');
+        const blobObj = await upload(`img-${team.id}-${Date.now()}-${i}.png`, dataUrlToBlob(img), {
+          access: 'public',
+          handleUploadUrl: '/api/upload',
+        });
         newImages.push(blobObj.url);
         changed = true;
       } else {
@@ -422,8 +428,7 @@ function App() {
     const isProduction = typeof window !== 'undefined' && (
       window.location.hostname === 'www.jubianstudio.cn' ||
       window.location.hostname === 'jubianstudio.cn' ||
-      window.location.hostname.includes('render.com') ||
-      window.location.hostname.includes('onrender.com')
+      window.location.hostname.includes('vercel.app')
     );
     
     try {
@@ -770,7 +775,10 @@ function App() {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      const blob = await uploadFile(file, 'avatars');
+      const blob = await upload(uniqueUploadName(file.name, 'avatar'), file, {
+        access: 'public',
+        handleUploadUrl: '/api/upload',
+      });
       targetSetter(prev => {
         if (!prev) return prev;
         const oldUrl = prev.avatar;
@@ -793,7 +801,10 @@ function App() {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      const blob = await uploadFile(file, 'covers');
+      const blob = await upload(uniqueUploadName(file.name, 'cover'), file, {
+        access: 'public',
+        handleUploadUrl: '/api/upload',
+      });
       targetSetter(prev => {
         if (!prev) return prev;
         const oldUrl = prev.coverImage;
@@ -816,7 +827,10 @@ function App() {
     if (!files.length) return;
     try {
       for (const file of files) {
-        const blob = await uploadFile(file, 'gallery');
+        const blob = await upload(uniqueUploadName(file.name, 'gallery'), file, {
+          access: 'public',
+          handleUploadUrl: '/api/upload',
+        });
         targetSetter(prev => {
           if (!prev) return prev;
           const nextImages = [...(prev.images || []), blob.url];
@@ -1288,10 +1302,14 @@ function App() {
         aspectRatio: '2:3',
         quality: 0.75
       });
-      // 上传到 Supabase Storage
-      const blobObj = await uploadFile(
+      // 上传到 Vercel Blob
+      const blobObj = await upload(
+        uniqueUploadName(file.name, isFinished ? 'finished-work' : 'unfinished-work'),
         compressedBlob,
-        isFinished ? 'finished-works' : 'unfinished-works'
+        {
+          access: 'public',
+          handleUploadUrl: '/api/upload',
+        }
       );
 
       let updatedTeam: Team | null = null;

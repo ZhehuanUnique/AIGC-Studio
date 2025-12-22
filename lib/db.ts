@@ -1,42 +1,13 @@
-import pg from 'pg';
-const { Pool } = pg;
+import { sql } from '@vercel/postgres';
 
 /**
  * 数据库工具函数
- * 用于与 PostgreSQL 交互（Render 或其他 PostgreSQL 服务）
- * 从环境变量 DATABASE_URL 读取连接配置
+ * 用于与 Vercel Postgres 交互
+ * @vercel/postgres 会自动从环境变量读取 DATABASE_URL
  */
 
-// 创建连接池
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_URL?.includes('render.com') 
-    ? { rejectUnauthorized: false } 
-    : undefined,
-});
-
-// 导出 sql 模板标签函数（兼容原 @vercel/postgres 的 API）
-export const sql = async (strings: TemplateStringsArray, ...values: any[]) => {
-  // 构建查询字符串
-  let query = '';
-  let paramIndex = 1;
-  const params: any[] = [];
-
-  for (let i = 0; i < strings.length; i++) {
-    query += strings[i];
-    if (i < values.length) {
-      query += `$${paramIndex}`;
-      params.push(values[i]);
-      paramIndex++;
-    }
-  }
-
-  const result = await pool.query(query, params);
-  return {
-    rows: result.rows,
-    rowCount: result.rowCount,
-  };
-};
+// 直接导出 sql，它会自动使用环境变量中的连接配置
+export { sql };
 
 // 获取所有团队数据（包含成员、todos等）
 export async function getTeams() {
@@ -321,3 +292,4 @@ export async function updateAnnouncement(content: string) {
     throw error;
   }
 }
+
