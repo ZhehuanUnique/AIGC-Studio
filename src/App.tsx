@@ -3,7 +3,7 @@ import {
   Search, Plus, Trash2, X, Image as ImageIcon, Save, RefreshCw, Upload,
   CheckCircle, CheckSquare, ListTodo, Square,
   Download, FileJson, ClipboardList, Unlock,
-  Wrench, Megaphone, GripVertical, Home
+  Wrench, Megaphone, GripVertical
 } from 'lucide-react';
 import { Team, Member, Todo, ResourceLink, ConsumptionRecord } from './types';
 import { 
