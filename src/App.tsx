@@ -3,7 +3,7 @@ import {
   Search, Plus, Trash2, X, Image as ImageIcon, Save, RefreshCw, Upload,
   CheckCircle, CheckSquare, ListTodo, Square,
   Download, FileJson, ClipboardList, Unlock,
-  Wrench, Megaphone, GripVertical
+  Wrench, Megaphone, GripVertical, Home
 } from 'lucide-react';
 import { Team, Member, Todo, ResourceLink, ConsumptionRecord } from './types';
 import { 
@@ -500,24 +500,38 @@ function App() {
         if (savedData) {
           try {
             const parsed = JSON.parse(savedData);
-            if (parsed.teams) {
+            if (parsed.teams && Array.isArray(parsed.teams)) {
               // 同样合并密码字段
               const teamsWithPasswords = parsed.teams.map((raw: any) => {
-                const team = normalizeTeam(raw);
-                const initialTeam = INITIAL_TEAMS.find(t => t.id === team.id);
-                return {
-                  ...team,
-                  password: team.password || initialTeam?.password || '0000',
-                  consumptionRecords: team.consumptionRecords || []
-                };
+                try {
+                  const team = normalizeTeam(raw);
+                  const initialTeam = INITIAL_TEAMS.find(t => t.id === team.id);
+                  return {
+                    ...team,
+                    password: team.password || initialTeam?.password || '0000',
+                    consumptionRecords: team.consumptionRecords || []
+                  };
+                } catch (e) {
+                  console.error(`规范化团队失败:`, e);
+                  const initialTeam = INITIAL_TEAMS.find(t => t.id === raw?.id);
+                  return initialTeam || INITIAL_TEAMS[0];
+                }
               });
               setTeams(teamsWithPasswords);
               console.log('📦 已从本地缓存加载数据（仅用于显示），但保存操作仍会尝试同步到云端');
+            } else {
+              // 如果localStorage数据无效，使用初始数据
+              setTeams(INITIAL_TEAMS);
             }
             if (parsed.announcement) setAnnouncement(parsed.announcement);
           } catch (e) {
             console.error('localStorage 解析失败:', e);
+            // 如果解析失败，使用初始数据
+            setTeams(INITIAL_TEAMS);
           }
+        } else {
+          // 如果没有localStorage数据，使用初始数据
+          setTeams(INITIAL_TEAMS);
         }
       } else {
         // 开发环境：回退到 localStorage
@@ -526,23 +540,37 @@ function App() {
         if (savedData) {
           try {
             const parsed = JSON.parse(savedData);
-            if (parsed.teams) {
+            if (parsed.teams && Array.isArray(parsed.teams)) {
               // 同样合并密码字段
               const teamsWithPasswords = parsed.teams.map((raw: any) => {
-                const team = normalizeTeam(raw);
-                const initialTeam = INITIAL_TEAMS.find(t => t.id === team.id);
-                return {
-                  ...team,
-                  password: team.password || initialTeam?.password || '0000',
-                  consumptionRecords: team.consumptionRecords || []
-                };
+                try {
+                  const team = normalizeTeam(raw);
+                  const initialTeam = INITIAL_TEAMS.find(t => t.id === team.id);
+                  return {
+                    ...team,
+                    password: team.password || initialTeam?.password || '0000',
+                    consumptionRecords: team.consumptionRecords || []
+                  };
+                } catch (e) {
+                  console.error(`规范化团队失败:`, e);
+                  const initialTeam = INITIAL_TEAMS.find(t => t.id === raw?.id);
+                  return initialTeam || INITIAL_TEAMS[0];
+                }
               });
               setTeams(teamsWithPasswords);
+            } else {
+              // 如果localStorage数据无效，使用初始数据
+              setTeams(INITIAL_TEAMS);
             }
             if (parsed.announcement) setAnnouncement(parsed.announcement);
           } catch (e) {
             console.error('localStorage 解析失败:', e);
+            // 如果解析失败，使用初始数据
+            setTeams(INITIAL_TEAMS);
           }
+        } else {
+          // 如果没有localStorage数据，使用初始数据
+          setTeams(INITIAL_TEAMS);
         }
         setUseLocalStorage(true);
       }
@@ -1984,6 +2012,15 @@ function App() {
         {/* 快捷入口 */}
         <div className="mb-10 flex flex-wrap items-center gap-3">
           <a
+            href="https://aigc-jubianage.vercel.app/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-slate-600 text-slate-200 px-3 py-2 rounded-lg font-bold text-xs transition-all"
+          >
+            <Home size={12} /> 首页
+          </a>
+          {/* 暂时隐藏 */}
+          {/* <a
             href="/juchacha.html"
             className="flex items-center gap-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white px-3 py-2 rounded-lg font-bold text-xs transition-all shadow-lg shadow-emerald-900/20"
           >
@@ -1994,7 +2031,7 @@ function App() {
             className="flex items-center gap-1 bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 text-slate-200 px-3 py-2 rounded-lg font-bold text-xs transition-all"
           >
             <Square size={12} /> 作品展示
-          </a>
+          </a> */}
         </div>
 
         <div className="mb-10 flex justify-center">
