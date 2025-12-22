@@ -2011,14 +2011,15 @@ function App() {
 
         {/* 快捷入口 */}
         <div className="mb-10 flex flex-wrap items-center gap-3">
-          <a
+          {/* 暂时隐藏 */}
+          {/* <a
             href="https://aigc-jubianage.vercel.app/"
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-slate-600 text-slate-200 px-3 py-2 rounded-lg font-bold text-xs transition-all"
           >
             <Home size={12} /> 首页
-          </a>
+          </a> */}
           {/* 暂时隐藏 */}
           {/* <a
             href="/juchacha.html"

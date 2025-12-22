@@ -169,19 +169,19 @@ export const DepartmentSection: React.FC<DepartmentSectionProps> = ({
         </div>
       </button>
 
-      <div className="flex flex-col lg:flex-row lg:items-center gap-4 sm:gap-6 mb-8 relative z-10">
-        <div className="flex items-center gap-4 min-w-[240px]">
+      <div className="flex flex-col lg:flex-row lg:items-end gap-4 sm:gap-6 mb-8 relative z-10">
+        <div className="flex items-start gap-4 min-w-[240px] lg:flex-shrink-0">
           <div
             onClick={() => isUnlocked && onEditGroup(team)}
-            className={`p-3 bg-slate-800 rounded-xl border border-slate-700 shadow-sm text-sky-500 ${
+            className={`p-3 bg-slate-800 rounded-xl border border-slate-700 shadow-sm text-sky-500 flex-shrink-0 ${
               isUnlocked ? 'cursor-pointer hover:bg-slate-700' : ''
             }`}
           >
             <Icon size={24} strokeWidth={1.5} />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <h2 className="text-xl sm:text-2xl font-bold text-slate-200 tracking-tight hover:text-white transition-colors break-words flex-shrink">
+            <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-200 tracking-tight hover:text-white transition-colors break-words flex-shrink-0 min-w-0">
                 {team.title}
               </h2>
               <div className="flex items-center gap-2 flex-shrink-0">
